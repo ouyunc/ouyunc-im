@@ -1,9 +1,10 @@
 package com.ouyunc.repository.support;
 
+import java.util.concurrent.TimeUnit;
 import com.ouyunc.core.exception.ExceptionReporter;
-
 import com.alibaba.fastjson2.JSON;
 import com.ouyunc.base.constant.MessageConstant;
+import com.ouyunc.base.model.MessageWriteHealth;
 import com.ouyunc.base.constant.MqArchiveRouting;
 import com.ouyunc.base.constant.MqConstant;
 import com.ouyunc.base.constant.enums.ExceptionCodeEnum;
@@ -15,7 +16,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import reactor.core.publisher.Mono;
 import reactor.core.scheduler.Schedulers;
-
 import java.time.Duration;
 import java.util.HashMap;
 import java.util.Map;
@@ -60,6 +60,10 @@ public final class MessageMqPublisherSupport {
             snapshot.getMessage().getMetadata().clearDeliveryClaims();
         }
         CompletableFuture<Object> result = new CompletableFuture<>();
+        // 给调用方一个独立的有界确认结果，超时并不取消底层已在途发布。
+        // 迟到确认不能把本次 UNKNOWN 响应改写成成功，重发仍须沿用原 messageId。
+        result.orTimeout(MessageConstant.MESSAGE_ARCHIVE_CONFIRM_TIMEOUT_MS, TimeUnit.MILLISECONDS);
+        result.whenComplete((value, error) -> MessageWriteHealth.mqResult(topic, error == null));
         try {
             infra.dbExecutor().execute(() -> {
                 try {
@@ -78,7 +82,7 @@ public final class MessageMqPublisherSupport {
                 }
             });
         } catch (Exception ex) {
-            return CompletableFuture.failedFuture(ex);
+            result.completeExceptionally(ex);
         }
         return result;
     }
@@ -112,9 +116,18 @@ public final class MessageMqPublisherSupport {
                                                      String failureContext) {
         try {
             CompletableFuture<?> future = infra.mqPublisher.send(topic, key, jsonBody, null);
+            if (MqConstant.requiresBrokerAcksAll(topic)) {
+                // 独立镜像只限制确认等待，不取消底层 broker 发布。
+                future = future.thenApply(value -> value)
+                        .orTimeout(MessageConstant.MESSAGE_ARCHIVE_CONFIRM_TIMEOUT_MS, TimeUnit.MILLISECONDS);
+                future.whenComplete((value, error) -> MessageWriteHealth.mqResult(topic, error == null));
+            }
             attachFailure(future, topic, key, null, jsonBody, null, failureContext);
             return future;
         } catch (Exception ex) {
+            if (MqConstant.requiresBrokerAcksAll(topic)) {
+                MessageWriteHealth.mqResult(topic, false);
+            }
             handleFailure(topic, key, null, jsonBody, null, failureContext, ex);
             return CompletableFuture.failedFuture(ex);
         }

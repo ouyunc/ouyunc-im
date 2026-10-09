@@ -1,5 +1,8 @@
 package com.ouyunc.message.processor.http;
 
+import com.ouyunc.message.http.HttpRequestAdmission;
+import com.ouyunc.base.constant.MessageConstant;
+import com.ouyunc.base.model.MessageWriteHealth;
 import com.ouyunc.base.constant.HttpRequestConstant;
 import com.ouyunc.base.constant.enums.HttpResponseCodeEnum;
 import com.ouyunc.base.model.HttpResponseResult;
@@ -41,6 +44,12 @@ public class HealthController {
                     HttpResponseCodeEnum.SERVICE_UNAVAILABLE,
                     "not ready (lease unavailable, drain, ID generator unsafe, or accept-new-connections=false)");
         }
+        var http = HttpRequestAdmission.snapshot();
+        if (http.inFlight() >= http.maxInFlight()
+                || http.maxBytes() - http.retainedBytes() < MessageConstant.HTTP_REQUEST_OVERHEAD_BYTES) {
+            throw new HttpPipelineException(HttpResponseStatus.SERVICE_UNAVAILABLE,
+                    HttpResponseCodeEnum.SERVICE_UNAVAILABLE, "HTTP admission capacity exhausted");
+        }
         ResourceMonitor.HealthCheckResult health = ResourceMonitor.checkHealth();
         if (!health.getIssues().isEmpty()) {
             throw new HttpPipelineException(
@@ -52,4 +61,16 @@ public class HealthController {
                 MessageServerContext.serverProperties().getLocalServerAddress(),
                 health.getWarnings()));
     }
+    /** UNKNOWN 不伪装正常。恢复由真实消息结果证明，失败时不踢连接也不创建探测写入。 */
+    @GetHttpRequest(HttpRequestConstant.HTTP_WRITE_READY_PATH)
+    public HttpResponseResult<MessageWriteHealth.Snapshot> writeReady() throws HttpPipelineException {
+        var snapshot = MessageWriteHealth.snapshot();
+        if (!MessageServerContext.isAcceptingNewConnections() || !snapshot.ready()) {
+            throw new HttpPipelineException(HttpResponseStatus.SERVICE_UNAVAILABLE,
+                    HttpResponseCodeEnum.SERVICE_UNAVAILABLE,
+                    "message writes not ready: redis=" + snapshot.redis().state() + ", mq=" + snapshot.mq().state());
+        }
+        return HttpResponseResult.success(snapshot);
+    }
+
 }

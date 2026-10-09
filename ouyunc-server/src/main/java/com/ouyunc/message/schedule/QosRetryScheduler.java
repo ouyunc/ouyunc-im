@@ -1,5 +1,11 @@
 package com.ouyunc.message.schedule;
 
+import java.util.concurrent.TimeoutException;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.Semaphore;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentMap;
 import com.github.benmanes.caffeine.cache.Cache;
 import com.github.benmanes.caffeine.cache.Caffeine;
 import com.ouyunc.base.constant.MessageConstant;
@@ -35,7 +41,6 @@ import org.apache.commons.collections4.CollectionUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
 import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
@@ -56,6 +61,32 @@ public final class QosRetryScheduler {
             .maximumSize(MessageConstant.QOS_ACK_PROOF_LOCAL_CACHE_MAX_SIZE)
             .expireAfterWrite(MessageConstant.QOS_ACK_PROOF_LOCAL_CACHE_TTL_SECONDS, TimeUnit.SECONDS)
             .build();
+
+    /** 仅存在于读取进行期间，完成即移除；不缓存正文，不持久化重试载荷。 */
+    private static final ConcurrentMap<RetryReadKey, CompletableFuture<Packet>> RETRY_READS =
+            new ConcurrentHashMap<>();
+    private static final Semaphore RETRY_READ_SLOTS =
+            new Semaphore(MessageConstant.QOS_RETRY_MAX_SHARED_READS);
+    private static final java.util.concurrent.atomic.LongAdder READ_CAPACITY_REJECTED = new java.util.concurrent.atomic.LongAdder();
+    private static final java.util.concurrent.atomic.LongAdder SHARED_READ_TIMEOUTS = new java.util.concurrent.atomic.LongAdder();
+    private static final java.util.concurrent.atomic.LongAdder SHARED_READ_JOINED = new java.util.concurrent.atomic.LongAdder();
+
+    /** 本地累积指标复用现有监控调度，不增加 Redis 或 MQ 请求。 */
+    public static ReadMetrics readMetrics() {
+        return new ReadMetrics(RETRY_READS.size(), READ_CAPACITY_REJECTED.sum(),
+                SHARED_READ_TIMEOUTS.sum(), SHARED_READ_JOINED.sum());
+    }
+
+    public record ReadMetrics(int inFlight, long capacityRejected, long waitTimeouts, long joined) { }
+
+    private record RetryReadKey(String appKey, long packetId) { }
+
+    /** 固定延迟任务串行执行；仅实际调用发送才消耗发送额度，推迟次数由总轮数兜底。 */
+    private static final class RetryBudget {
+        private final int maxSends;
+        private int sends;
+        private RetryBudget(int maxSends) { this.maxSends = maxSends; }
+    }
 
     private static final Logger log = LoggerFactory.getLogger(QosRetryScheduler.class);
 
@@ -118,11 +149,15 @@ public final class QosRetryScheduler {
         if (StringUtils.isBlank(taskId)) {
             return;
         }
-        ScheduleTimer.scheduleWithFixedDelay(taskId, taskWrapper -> retryOnce(retryContext, taskId, taskWrapper),
+        int maxSends = MessageServerContext.serverProperties().getQosRetryMaxLoops();
+        RetryBudget budget = new RetryBudget(maxSends);
+        int maxRounds = (int) Math.min(Integer.MAX_VALUE,
+                (long) maxSends + MessageConstant.QOS_RETRY_MAX_DEFERRALS);
+        ScheduleTimer.scheduleWithFixedDelay(taskId, taskWrapper -> retryOnce(retryContext, taskId, taskWrapper, budget),
                 MessageServerContext.serverProperties().getQosRetryInitialDelay(),
                 MessageServerContext.serverProperties().getQosRetryPeriod(),
                 TimeUnit.SECONDS,
-                MessageServerContext.serverProperties().getQosRetryMaxLoops());
+                maxRounds);
     }
 
     /**
@@ -285,7 +320,8 @@ public final class QosRetryScheduler {
         return local.equals(metadata.getIngress().getOriginServerAddress());
     }
 
-    private static void retryOnce(QosRetryTaskContext retryContext, String taskId, TimerTaskWrapper taskWrapper) {
+    private static void retryOnce(QosRetryTaskContext retryContext, String taskId, TimerTaskWrapper taskWrapper,
+                                  RetryBudget budget) {
         if (!taskStillActive(taskId, taskWrapper)) {
             return;
         }
@@ -301,7 +337,7 @@ public final class QosRetryScheduler {
         Packet schedulePackage = loadRetryPacket(retryContext);
         if (schedulePackage == null) {
             // 热正文暂时不可读时跳过本轮。取消任务会把后续重试也丢掉，恢复只能再靠历史补拉。
-            log.warn("QoS 重试加载消息失败，跳过本轮: taskId={}", taskId);
+            log.debug("QoS 重试正文暂不可用，使用有界推迟额度: taskId={}", taskId);
             return;
         }
         if (!taskStillActive(taskId, taskWrapper)) {
@@ -311,16 +347,70 @@ public final class QosRetryScheduler {
         retryPacket.getMessage().ensureMetadata().ensureClusterRoute()
                 .setClusterForwardMode(ClusterForwardModeEnum.CLIENT);
         retryPacket.getMessage().ensureMetadata().ensureClusterRoute().setFanoutTargets(null);
-        MessageSender.send(retryPacket, Target.newBuilder()
+        // 发送抛出异常同样消耗发送额度，避免故障时额外放大发送压力。
+        budget.sends++;
+        try {
+            MessageSender.send(retryPacket, Target.newBuilder()
                 .appKey(device.getAppKey())
                 .targetIdentity(device.getIdentity())
                 .targetServerAddress(device.getLoginServerAddress())
                 .deviceType(device.getDeviceType())
                 .build());
+        } finally {
+            if (budget.sends >= budget.maxSends) {
+                taskWrapper.cancel();
+            }
+        }
     }
 
+    /**
+     * 同一消息多个接收端并发重试时共用一次正在进行的正文/撤回状态读取。
+     * 不保存已完成结果，后续波次重新读取撤回状态；每个发送者仍克隆 Packet 后再修改。
+     * 容量满则跳过本轮，由既有重试次数和历史补拉兜底，禁止回退成无限并发回源。
+     */
     private static Packet loadRetryPacket(QosRetryTaskContext retryContext) {
-        return loadStoredPacket(retryContext.appKey(), retryContext.packetId());
+        RetryReadKey key = new RetryReadKey(retryContext.appKey(), retryContext.packetId());
+        var existing = RETRY_READS.get(key);
+        if (existing != null) {
+            return awaitRetryRead(existing);
+        }
+        if (!RETRY_READ_SLOTS.tryAcquire()) {
+            READ_CAPACITY_REJECTED.increment();
+            return null;
+        }
+        var shared = new CompletableFuture<Packet>();
+        existing = RETRY_READS.putIfAbsent(key, shared);
+        if (existing != null) {
+            RETRY_READ_SLOTS.release();
+            return awaitRetryRead(existing);
+        }
+        try {
+            Packet packet = loadStoredPacket(key.appKey(), key.packetId());
+            shared.complete(packet);
+            return packet;
+        } catch (RuntimeException | Error error) {
+            shared.completeExceptionally(error);
+            throw error;
+        } finally {
+            RETRY_READS.remove(key, shared);
+            RETRY_READ_SLOTS.release();
+        }
+    }
+
+    /** 等待者超时或取消不能取消共享读取，其他接收端仍可能需要结果。 */
+    private static Packet awaitRetryRead(CompletableFuture<Packet> shared) {
+        SHARED_READ_JOINED.increment();
+        try {
+            return shared.get(MessageConstant.QOS_RETRY_SHARED_READ_TIMEOUT_MS, TimeUnit.MILLISECONDS);
+        } catch (InterruptedException error) {
+            Thread.currentThread().interrupt();
+            return null;
+        } catch (TimeoutException error) {
+            SHARED_READ_TIMEOUTS.increment();
+            return null;
+        } catch (ExecutionException error) {
+            return null;
+        }
     }
 
     private static Packet loadStoredPacket(String appKey, long packetId) {

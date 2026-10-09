@@ -16,6 +16,11 @@ public class ServerReadyResponse implements Serializable {
 
     public static final String STATUS_READY = "READY";
 
+    /** 连接就绪不等于消息写入就绪，明确输出两类状态。 */
+    private MessageWriteHealth.Snapshot writeHealth;
+    public MessageWriteHealth.Snapshot getWriteHealth() { return writeHealth; }
+    public void setWriteHealth(MessageWriteHealth.Snapshot value) { writeHealth = value; }
+
     private String status;
     private String address;
     /** 非致命资源告警，可为空列表 */
@@ -24,6 +29,7 @@ public class ServerReadyResponse implements Serializable {
     public static ServerReadyResponse ready(String address, List<String> warnings) {
         ServerReadyResponse response = new ServerReadyResponse();
         response.setStatus(STATUS_READY);
+        response.setWriteHealth(MessageWriteHealth.snapshot());
         response.setAddress(address);
         response.setWarnings(warnings == null || warnings.isEmpty()
                 ? Collections.emptyList()

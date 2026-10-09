@@ -184,29 +184,22 @@ public abstract class AbstractMessageServer implements MessageServer {
             return false;
         }
         try {
-            // 1. 摘流：拒绝新登录，/ready → 503
             MessageServerContext.enterDrainMode();
-            // 2. SERVER_STOP（同步）：通知客户端主动断开 → 宽限期 → 强制关残留 → Redis 订阅/节点租约清理
-            MessageServerContext.publishEvent(new MessageEvent(this, MessageEventTypeEnum.SERVER_STOP), false);
-            // 3. 停止资源监控（调度任务随 ThreadPoolManager 一并结束）
-            ResourceMonitor.stopMonitoring();
-            // 4. 停止 QoS 等 HashedWheelTimer，取消未完成超时
-            ScheduleTimer.stop();
-            // 5. HTTP 业务线程池
-            HttpRequestDispatcher.shutdownHttpBusinessExecutor();
-            // 6. 对外 Netty，等待关闭完成
-            awaitEventLoopGroupShutdown(bossGroup, "bossGroup");
-            awaitEventLoopGroupShutdown(workerGroup, "workerGroup");
-            // 7. 集群内置客户端连接池
-            if (MessageServerContext.serverProperties().isClusterEnable() && messageClient != null) {
-                messageClient.stop();
-            }
-            // 8. Disruptor 环形队列（须在 ThreadPoolManager 之前，环有独立消费线程）
-            shutdownEventMulticaster();
-            // 9. 全局业务线程池
-            ThreadPoolManager.shutdownAll();
-        } catch (Throwable t) {
-            log.error("优雅关闭过程异常: {}", t.getMessage(), t);
+            // 先排空 HTTP，业务依赖及响应通道此时仍可用；各步骤失败不阻断后续清理。
+            shutdownStep("HTTP", HttpRequestDispatcher::shutdownHttpBusinessExecutor);
+            shutdownStep("SERVER_STOP", () -> MessageServerContext.publishEvent(
+                    new MessageEvent(this, MessageEventTypeEnum.SERVER_STOP), false));
+            shutdownStep("monitor", ResourceMonitor::stopMonitoring);
+            shutdownStep("timer", ScheduleTimer::stop);
+            shutdownStep("bossGroup", () -> awaitEventLoopGroupShutdown(bossGroup, "bossGroup"));
+            shutdownStep("workerGroup", () -> awaitEventLoopGroupShutdown(workerGroup, "workerGroup"));
+            shutdownStep("clusterClient", () -> {
+                if (MessageServerContext.serverProperties().isClusterEnable() && messageClient != null) {
+                    messageClient.stop();
+                }
+            });
+            shutdownStep("events", AbstractMessageServer::shutdownEventMulticaster);
+            shutdownStep("threadPools", ThreadPoolManager::shutdownAll);
         } finally {
             // 即使排空异常也先封闭发号，再归还机器号；后续残留任务只能失败，不能继续发号。
             if (MessageServerContext.idGenerator() instanceof com.ouyunc.id.CosIdSnowflakeIdGenerator generator) {
@@ -218,8 +211,17 @@ public abstract class AbstractMessageServer implements MessageServer {
     }
 
     /**
-     * 关闭事件多播器并释放各等级 Disruptor RingBuffer。
+     * 各关闭步骤独立执行，避免单个资源异常阻断后续收尾。
      */
+    private static void shutdownStep(String name, Runnable action) {
+        try {
+            action.run();
+        } catch (Throwable error) {
+            log.error("关闭步骤失败，继续其他资源清理: {}", name, error);
+        }
+    }
+
+    /** 关闭事件多播器并释放各等级 Disruptor RingBuffer。 */
     private static void shutdownEventMulticaster() {
         MessageEventMulticaster multicaster = MessageServerContext.messageEventMulticaster;
         if (multicaster == null) {

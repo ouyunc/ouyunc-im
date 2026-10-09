@@ -85,17 +85,34 @@ public final class NodeLeaseKeeper {
             }
             current = null;
             run.heartbeatTask.cancel();
-            run.publishLock.lock();
-            run.quotaMaintenanceLock.lock();
+            boolean publishLocked = false;
+            boolean quotaLocked = false;
+            long deadline = System.nanoTime() + TimeUnit.MILLISECONDS.toNanos(MessageConstant.NODE_LEASE_STOP_TIMEOUT_MS);
             try {
+                publishLocked = run.publishLock.tryLock(MessageConstant.NODE_LEASE_STOP_TIMEOUT_MS, TimeUnit.MILLISECONDS);
+                if (publishLocked) {
+                    quotaLocked = run.quotaMaintenanceLock.tryLock(
+                            Math.max(0, deadline - System.nanoTime()), TimeUnit.NANOSECONDS);
+                }
+                if (!quotaLocked) {
+                    log.warn("停止节点租约等待维护超时，等待 TTL 回收 nodeId={}", run.nodeId);
+                    return;
+                }
                 if (run.clusterMode) {
                     NodeLeaseRedisSupport.release(CacheFactory.STRING_REDIS.instance(), run.nodeId, run.payloadJson);
                 }
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+                log.warn("停止节点租约被中断，等待 TTL 回收 nodeId={}", run.nodeId);
             } catch (Exception e) {
                 log.warn("停止节点租约清理失败，等待 TTL 回收 nodeId={}", run.nodeId, e);
             } finally {
-                run.quotaMaintenanceLock.unlock();
-                run.publishLock.unlock();
+                if (quotaLocked) {
+                    run.quotaMaintenanceLock.unlock();
+                }
+                if (publishLocked) {
+                    run.publishLock.unlock();
+                }
             }
             log.info("IM 节点租约已停止 nodeId={} epoch={}", run.nodeId, run.epoch);
         }

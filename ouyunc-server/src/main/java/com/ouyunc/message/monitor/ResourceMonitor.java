@@ -1,5 +1,7 @@
 package com.ouyunc.message.monitor;
 
+import com.ouyunc.message.http.HttpRequestAdmission;
+import com.ouyunc.base.model.MessageWriteHealth;
 import com.github.benmanes.caffeine.cache.Cache;
 import com.github.benmanes.caffeine.cache.stats.CacheStats;
 import com.google.common.collect.Lists;
@@ -13,7 +15,6 @@ import com.ouyunc.message.cluster.lease.NodeLeaseKeeper;
 import com.ouyunc.message.context.MessageServerContext;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
 import java.util.*;
 import java.util.function.Consumer;
 import java.util.function.Supplier;
@@ -402,6 +403,14 @@ public final class ResourceMonitor {
      * 输出线程池指标
      */
     public static void logThreadPoolMetrics() {
+        var http = HttpRequestAdmission.snapshot();
+        var writes = MessageWriteHealth.snapshot();
+        var qosReads = com.ouyunc.message.schedule.QosRetryScheduler.readMetrics();
+        log.info("【QoS 正文读取】在途={} 容量拒绝={} 等待超时={} 合并等待={}",
+                qosReads.inFlight(), qosReads.capacityRejected(), qosReads.waitTimeouts(), qosReads.joined());
+        log.info("【HTTP 准入】在途={}/{} 保留字节={}/{} 拒绝={}；消息写入 Redis={} MQ={}",
+                http.inFlight(), http.maxInFlight(), http.retainedBytes(), http.maxBytes(), http.rejected(),
+                writes.redis().state(), writes.mq().state());
         Map<ThreadPoolId, ThreadPoolMetrics> metrics = getThreadPoolMetrics();
         if (metrics.isEmpty()) {
             log.info("【线程池】无可用指标");

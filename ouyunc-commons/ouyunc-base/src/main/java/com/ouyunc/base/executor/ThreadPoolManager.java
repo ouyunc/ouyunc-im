@@ -23,6 +23,7 @@ public final class ThreadPoolManager {
     private static final Logger log = LoggerFactory.getLogger(ThreadPoolManager.class);
 
     private static final AtomicBoolean INITIALISED = new AtomicBoolean(false);
+    private static volatile boolean stopping;
 
     private static volatile ThreadPoolConfig currentConfig = ThreadPoolConfig.defaultConfig();
 
@@ -35,11 +36,12 @@ public final class ThreadPoolManager {
     /**
      * Initialise thread pool manager with config.
      */
-    public static void initialise(ThreadPoolConfig config) {
+    public static synchronized void initialise(ThreadPoolConfig config) {
         if (config == null) {
             config = ThreadPoolConfig.defaultConfig();
         }
         currentConfig = config;
+        stopping = false;
         rebuildExecutors();
         INITIALISED.set(true);
     }
@@ -162,9 +164,15 @@ public final class ThreadPoolManager {
     }
 
     private static ExecutorService getExecutor(ThreadPoolId id) {
+        if (stopping) {
+            throw new RejectedExecutionException("Thread pools are stopping");
+        }
         ManagedExecutor managed = EXECUTORS.get(id);
         if (managed == null) {
             synchronized (ThreadPoolManager.class) {
+                if (stopping) {
+                    throw new RejectedExecutionException("Thread pools are stopping");
+                }
                 managed = EXECUTORS.get(id);
                 if (managed == null) {
                     ThreadPoolConfig.PoolConfig config = currentConfig.get(id);
@@ -192,9 +200,38 @@ public final class ThreadPoolManager {
     // ===== shutdown =====
 
     public static void shutdownAll() {
-        EXECUTORS.forEach((id, managed) -> shutdownExecutor(id, managed.executor(), true));
-        EXECUTORS.clear();
-        INITIALISED.set(false);
+        Map<ThreadPoolId, ManagedExecutor> closing;
+        synchronized (ThreadPoolManager.class) {
+            stopping = true;
+            closing = new EnumMap<>(ThreadPoolId.class);
+            closing.putAll(EXECUTORS);
+            EXECUTORS.clear();
+            INITIALISED.set(false);
+        }
+        long deadline = System.nanoTime() + TimeUnit.MILLISECONDS.toNanos(
+                com.ouyunc.base.constant.MessageConstant.THREAD_POOLS_DRAIN_TIMEOUT_MS);
+        // 先同时停止接收，再共享一个截止时间等待；一个线程池异常不能跳过其他线程池。
+        closing.forEach((id, managed) -> {
+            try {
+                managed.executor().shutdown();
+            } catch (RuntimeException error) {
+                log.error("Thread pool [{}] shutdown failed", id, error);
+            }
+        });
+        closing.forEach((id, managed) -> {
+            ExecutorService executor = managed.executor();
+            try {
+                if (!executor.awaitTermination(Math.max(0, deadline - System.nanoTime()), TimeUnit.NANOSECONDS)) {
+                    log.warn("Thread pool [{}] drain deadline exceeded", id);
+                    executor.shutdownNow();
+                }
+            } catch (InterruptedException error) {
+                Thread.currentThread().interrupt();
+                executor.shutdownNow();
+            } catch (RuntimeException error) {
+                log.error("Thread pool [{}] drain failed", id, error);
+            }
+        });
     }
 
     private static void shutdownExecutor(ThreadPoolId id, ExecutorService executor, boolean wait) {

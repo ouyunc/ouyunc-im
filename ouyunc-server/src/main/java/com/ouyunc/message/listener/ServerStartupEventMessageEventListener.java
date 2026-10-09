@@ -20,6 +20,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
  */
 @EventListener
 class ServerStartupEventMessageEventListener implements MessageEventListener<MessageEvent> {
+    private static final org.slf4j.Logger log = org.slf4j.LoggerFactory.getLogger(ServerStartupEventMessageEventListener.class);
 
     private static final AtomicBoolean RUNTIME_RESOURCES_SHUTDOWN_DONE = new AtomicBoolean(false);
 
@@ -45,9 +46,18 @@ class ServerStartupEventMessageEventListener implements MessageEventListener<Mes
         if (!RUNTIME_RESOURCES_SHUTDOWN_DONE.compareAndSet(false, true)) {
             return;
         }
-        AppKeyDeviceTypeSubscriber.stop();
-        RelationCacheSubscriber.stop();
-        LoginRouteCacheInvalidationBus.stop();
-        NodeLeaseKeeper.stop();
+        stopResource("device subscriber", AppKeyDeviceTypeSubscriber::stop);
+        stopResource("relation subscriber", RelationCacheSubscriber::stop);
+        stopResource("login route subscriber", LoginRouteCacheInvalidationBus::stop);
+        stopResource("node lease", NodeLeaseKeeper::stop);
+    }
+
+    /** 独立清理订阅与租约，单个订阅关闭异常不能使租约仍保持运行。 */
+    private static void stopResource(String name, Runnable action) {
+        try {
+            action.run();
+        } catch (Throwable error) {
+            log.error("运行时资源关闭失败: {}", name, error);
+        }
     }
 }

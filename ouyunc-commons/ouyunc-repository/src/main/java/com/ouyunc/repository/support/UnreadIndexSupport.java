@@ -1,19 +1,18 @@
 package com.ouyunc.repository.support;
 
-import com.ouyunc.core.exception.ExceptionReporter;
-
 import com.ouyunc.base.constant.CacheConstant;
 import com.ouyunc.base.constant.MessageConstant;
 import com.ouyunc.base.constant.NumberConstant;
 import com.ouyunc.base.constant.enums.ExceptionCodeEnum;
+import com.ouyunc.base.constant.enums.IdentityType;
 import com.ouyunc.base.constant.enums.LuaScriptEnum;
+import com.ouyunc.base.model.MessageWriteHealth;
 import com.ouyunc.base.packet.Packet;
 import com.ouyunc.base.packet.message.Message;
-import com.ouyunc.core.device.DeviceTypeRegistry;
-import com.ouyunc.base.constant.enums.IdentityType;
 import com.ouyunc.core.context.MessageContext;
+import com.ouyunc.core.device.DeviceTypeRegistry;
+import com.ouyunc.core.exception.ExceptionReporter;
 import org.apache.commons.collections4.CollectionUtils;
-import org.apache.commons.lang3.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.data.redis.core.SessionCallback;
@@ -94,8 +93,10 @@ public final class UnreadIndexSupport {
                     return null;
                 }
             });
+            MessageWriteHealth.redisResult(MessageWriteHealth.Stage.REDIS_UNREAD, true);
             return true;
         } catch (Exception e) {
+            MessageWriteHealth.redisResult(MessageWriteHealth.Stage.REDIS_UNREAD, false);
             log.error("incrOne2OneOnMessage failed appKey={} recipient={} sender={} packetId={}",
                     appKey, recipientId, senderId, packetId, e);
             ExceptionReporter.reportSystem(ExceptionCodeEnum.CACHE_PERSISTENCE_ERROR, "单聊未读索引更新失败: " + e.getMessage(), "UnreadIndexSupport", packet, e);

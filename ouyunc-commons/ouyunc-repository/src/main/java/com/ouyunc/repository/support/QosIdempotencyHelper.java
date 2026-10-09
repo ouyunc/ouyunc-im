@@ -1,5 +1,6 @@
 package com.ouyunc.repository.support;
 
+import com.ouyunc.base.model.MessageWriteHealth;
 import com.ouyunc.base.constant.CacheConstant;
 import com.ouyunc.base.constant.MessageConstant;
 import com.ouyunc.base.model.Metadata;
@@ -12,7 +13,6 @@ import org.springframework.data.redis.core.RedisCallback;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.data.redis.core.script.DefaultRedisScript;
 import org.springframework.data.redis.serializer.RedisSerializer;
-
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
@@ -558,8 +558,11 @@ public final class QosIdempotencyHelper {
     private static Long eval(RedisTemplate<String, ?> template, DefaultRedisScript<Long> script,
                              List<String> keys, String... args) {
         try {
-            return template.execute(script, STRING_SERIALIZER, null, keys, (Object[]) args);
+            Long result = template.execute(script, STRING_SERIALIZER, null, keys, (Object[]) args);
+            MessageWriteHealth.redisResult(MessageWriteHealth.Stage.REDIS_IDEMPOTENCY, result != null);
+            return result;
         } catch (Exception e) {
+            MessageWriteHealth.redisResult(MessageWriteHealth.Stage.REDIS_IDEMPOTENCY, false);
             log.warn("QoS 幂等脚本执行失败: {}", e.getMessage());
             return null;
         }
@@ -571,11 +574,13 @@ public final class QosIdempotencyHelper {
         try {
             Object raw = template.execute(script, STRING_SERIALIZER,
                     castResultSerializer(STRING_SERIALIZER), keys, (Object[]) args);
+            MessageWriteHealth.redisResult(MessageWriteHealth.Stage.REDIS_IDEMPOTENCY, raw instanceof List<?>);
             if (raw instanceof List<?> list) {
                 return list;
             }
             return null;
         } catch (Exception e) {
+            MessageWriteHealth.redisResult(MessageWriteHealth.Stage.REDIS_IDEMPOTENCY, false);
             log.warn("QoS 幂等脚本执行失败: {}", e.getMessage());
             return null;
         }

@@ -8,6 +8,7 @@ import com.ouyunc.base.constant.enums.LuaScriptEnum;
 import com.ouyunc.base.executor.ThreadPoolManager;
 import com.ouyunc.base.model.FiveConsumer;
 import com.ouyunc.base.model.Metadata;
+import com.ouyunc.base.model.MessageWriteHealth;
 import com.ouyunc.base.packet.Packet;
 import com.ouyunc.base.packet.message.Message;
 import com.ouyunc.base.utils.QosClaimIdentities;
@@ -229,6 +230,7 @@ public final class SessionMessagePersistenceSupport {
                 results = conn.closePipeline();
                 log.debug("Pipeline 关闭成功，结果数量: {}", results == null ? 0 : results.size());
             } catch (Exception e) {
+                MessageWriteHealth.redisResult(MessageWriteHealth.Stage.REDIS_MESSAGE, false);
                 log.error("Pipeline 执行失败: ", e);
                 forceClosePipeline(conn);
                 releaseQosClaimQuietly(qosSave, appKey, packet.getPacketId(), qosClaimIdentity,
@@ -237,6 +239,7 @@ public final class SessionMessagePersistenceSupport {
             }
 
             if (CollectionUtils.isEmpty(results)) {
+                MessageWriteHealth.redisResult(MessageWriteHealth.Stage.REDIS_MESSAGE, false);
                 releaseQosClaimQuietly(qosSave, appKey, packet.getPacketId(), qosClaimIdentity,
                         clientMessageId, qosOwnerToken, metadata);
                 return SaveMessageOutcomeEnum.UNKNOWN;
@@ -255,6 +258,7 @@ public final class SessionMessagePersistenceSupport {
                     log.warn("QoS 提交结果未知，保留热写和占位等待重试核对: appKey={} packetId={} state={}",
                             appKey, packet.getPacketId(), verifiedState);
                     // 不能删除热数据或释放占位：Redis 可能已经提交成功但响应丢失。
+                    MessageWriteHealth.redisResult(MessageWriteHealth.Stage.REDIS_MESSAGE, false);
                     clearQosClaimMarks(metadata);
                     return SaveMessageOutcomeEnum.UNKNOWN;
                 }
@@ -272,9 +276,11 @@ public final class SessionMessagePersistenceSupport {
             if (qosSave && metadata != null) {
                 metadata.ensureQosClaim().setQosOwnerToken(null);
             }
+            MessageWriteHealth.redisResult(MessageWriteHealth.Stage.REDIS_MESSAGE, true);
             return SaveMessageOutcomeEnum.SUCCESS;
 
         } catch (Exception e) {
+            MessageWriteHealth.redisResult(MessageWriteHealth.Stage.REDIS_MESSAGE, false);
             log.error("Redis Pipeline 操作异常: ", e);
             releaseQosClaimQuietly(qosSave, appKey, packet.getPacketId(), qosClaimIdentity,
                     clientMessageId, qosOwnerToken, metadataFromPacket(packet));

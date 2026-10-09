@@ -200,10 +200,32 @@ public class MessageConstant {
      */
     public static final long DELIVERY_RUN_LOCK_MILLIS = 120_000L;
 
-    /** HTTP 异步结果的最长等待时间，不在超时后继续保留请求引用。 */
+    /** HTTP 响应等待期限；异步业务持有的资源需等业务结束后释放。 */
     public static final long HTTP_ASYNC_RESULT_TIMEOUT_MS = 30_000L;
+    /** 请求体接收总期限，防止慢请求长期占据节点聚合预算。 */
+    public static final long HTTP_RECEIVE_TIMEOUT_MS = 30_000L;
+    /** HTTP 排空时间，涵盖已超时但仍未结束的业务。 */
+    public static final long HTTP_DRAIN_TIMEOUT_MS = 30_000L;
+    /** 所有全局业务线程池共享排空期限，不能按线程池个数累加。 */
+    public static final long THREAD_POOLS_DRAIN_TIMEOUT_MS = 30_000L;
+    /** 租约停止等待在途维护的期限；超时后由 Redis TTL 回收，禁止无界等待锁。 */
+    public static final long NODE_LEASE_STOP_TIMEOUT_MS = 5_000L;
+    /** QoS 读取拥塞最多额外推迟三轮，总任务轮数仍有硬上限。 */
+    public static final int QOS_RETRY_MAX_DEFERRALS = 3;
     /** 每个 HTTP 业务执行器的排队上限；过载明确拒绝，不能无限积压请求正文。 */
     public static final int HTTP_BUSINESS_MAX_PENDING_TASKS = 1024;
+    /** 全节点 HTTP 排队及处理中请求共享预算；正文之外预留请求对象/头部估算空间。 */
+    public static final int HTTP_NODE_MAX_IN_FLIGHT = 256;
+    public static final long HTTP_NODE_MAX_RETAINED_BYTES = Math.max(1024L * 1024,
+            Math.min(64L * 1024 * 1024, Runtime.getRuntime().maxMemory() / 16));
+    public static final long HTTP_REQUEST_OVERHEAD_BYTES = 4096L;
+    /** 只合并正在读取的同一消息；不缓存已完成结果，避免使用过期撤回状态。 */
+    public static final int QOS_RETRY_MAX_SHARED_READS = 256;
+    public static final long QOS_RETRY_SHARED_READ_TIMEOUT_MS = 10_000L;
+    /** 依赖状态只来自真实业务结果；无近期成功时明确 UNKNOWN，不主动打探测请求。 */
+    public static final long MESSAGE_WRITE_HEALTH_FRESH_MS = 60_000L;
+    public static final int MESSAGE_WRITE_HEALTH_FAILURE_THRESHOLD = 3;
+
 
     /**
      * HTTP 推送 PENDING 僵死接管窗口（B3）：进程崩溃后同 messageId 可在该时限后重新抢占。

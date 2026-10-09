@@ -6,7 +6,7 @@ import io.netty.handler.codec.http.HttpServerCodec;
 import io.netty.handler.stream.ChunkedWriteHandler;
 
 /**
- * 共享的 HTTP 入站解码链：Codec → Chunked → {@link Json413HttpObjectAggregator} → 聚合超长异常处理。
+ * 共享的 HTTP 入站解码链：Codec → Chunked → 节点接收准入 → {@link Json413HttpObjectAggregator} → 聚合超长异常处理。
  * {@code Expect: 100-continue} 由 {@link io.netty.handler.codec.http.HttpObjectAggregator}（本处为子类）在
  * {@code newContinueResponse} 中处理，勿再叠加 {@link io.netty.handler.codec.http.HttpServerExpectContinueHandler}，
  * 否则 Netty 文档所述会与聚合器冲突（先无条件 100、去掉 Expect，超长无法在期望阶段拒绝）。
@@ -28,6 +28,7 @@ public final class HttpServerHandlerPipeline {
     public static void addSharedHttpDecoding(ChannelPipeline pipeline, int maxContentLength) {
         pipeline.addLast(MessageConstant.HTTP_SERVER_CODEC_HANDLER, new HttpServerCodec())
                 .addLast(MessageConstant.CHUNKED_WRITE_HANDLER, new ChunkedWriteHandler())
+                .addLast(new HttpReceiveAdmissionHandler())
                 .addLast(MessageConstant.HTTP_OBJECT_AGGREGATOR_HANDLER, new Json413HttpObjectAggregator(maxContentLength))
                 .addLast(MessageConstant.HTTP_AGGREGATOR_EXCEPTION_HANDLER, new HttpAggregatorExceptionHandler());
     }

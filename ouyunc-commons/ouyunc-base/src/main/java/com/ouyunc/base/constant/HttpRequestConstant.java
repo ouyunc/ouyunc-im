@@ -20,6 +20,8 @@ public class HttpRequestConstant extends HttpConstant{
      * LB 就绪探活（摘流或不健康时 HTTP 503，无需鉴权）
      */
     public static final String HTTP_READY_PATH = "/ready";
+    /** 消息写入诊断：只依据近期业务结果，冷启动/长期空闲 UNKNOWN 返回 503；不用于长连接 LB 摘流。 */
+    public static final String HTTP_WRITE_READY_PATH = "/write-ready";
 
     /**
      * 运维摘流：拒绝新登录并使 /ready 返回 503。
