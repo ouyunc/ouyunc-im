@@ -3,6 +3,7 @@ package com.ouyunc.repository;
 import com.ouyunc.base.constant.enums.*;
 import com.ouyunc.base.packet.Packet;
 import com.ouyunc.base.model.GroupRequestSession;
+import com.ouyunc.base.model.ExternalDeliveryRecipient;
 import com.ouyunc.base.model.RequestSession;
 import com.ouyunc.repository.cs.CsImSessionRoute;
 import com.ouyunc.repository.support.One2OneChatAccess;
@@ -147,7 +148,9 @@ public enum DefaultRepository implements Repository {
     }
 
     /**
-     * 去掉已屏蔽本群消息的成员后再扇出。屏蔽索引未就绪时返回空集（fail-closed）。
+     * 去掉已屏蔽本群消息的成员后再扇出。
+     * 屏蔽索引未就绪抛 {@link com.ouyunc.repository.support.GroupMembershipSupport.GroupMembershipLoadException}，
+     * 不得返回空集，否则首次扇出会被记成完成。
      */
     public Set<String> excludeGroupShieldedMembers(String appKey, String groupId, Set<String> memberIds) {
         return RepositorySupports.GROUP.excludeGroupShieldedMembers(appKey, groupId, memberIds);
@@ -255,6 +258,17 @@ public enum DefaultRepository implements Repository {
 
     public boolean isExternalRecipientConfirmed(Packet packet, String recipientId, MessageDeliveryChannelEnum channel) {
         return RepositorySupports.DELIVERY_COMPLETION.isExternalConfirmed(packet, recipientId, channel);
+    }
+
+    /** 同一消息的外渠状态按有界批次处理，减少 Redis 往返。 */
+    public List<ExternalDeliveryRecipient> markExternalRecipientsPending(
+            Packet packet, List<ExternalDeliveryRecipient> recipients) {
+        return RepositorySupports.DELIVERY_COMPLETION.markExternalPendingBatch(packet, recipients);
+    }
+
+    public void confirmExternalRecipients(Packet packet,
+            List<ExternalDeliveryRecipient> recipients) {
+        RepositorySupports.DELIVERY_COMPLETION.confirmExternalBatch(packet, recipients);
     }
 
     public void confirmExternalRecipient(Packet packet, String recipientId, MessageDeliveryChannelEnum channel) {

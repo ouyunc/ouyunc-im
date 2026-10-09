@@ -181,16 +181,28 @@ public final class GroupMembershipSupport {
     }
 
     /**
-     * 过滤已屏蔽本群消息的成员。索引未就绪则 fail-closed 不扇出，避免漏屏蔽。
+     * 过滤已屏蔽本群消息的成员。
+     * <p>索引未就绪必须抛 {@link GroupMembershipLoadException}，不能返回空集。
+     * 空集和“全员都已屏蔽”无法区分，调用方会正常返回并 {@code finishDelivery}，
+     * 同一 packetId 的重试会看到 done，不再补推。抛错后执行权被释放，客户端重试和本机补投可以继续扇出。
+     * 真正无人屏蔽时返回原集合；全员屏蔽时返回空集，那一次完成标记是对的。</p>
      */
     public Set<String> excludeGroupShieldedMembers(String appKey, String groupId, Set<String> memberIds) {
         if (memberIds == null || memberIds.isEmpty()) {
             return Set.of();
         }
-        Set<String> shielded = loadShieldedMembersHot(appKey, groupId);
+        Set<String> shielded;
+        try {
+            shielded = loadShieldedMembersHot(appKey, groupId, memberIds);
+        } catch (GroupMembershipLoadException error) {
+            throw error;
+        } catch (RuntimeException error) {
+            throw new GroupMembershipLoadException("读取群屏蔽索引失败: " + groupId, error);
+        }
         if (shielded == null) {
-            log.warn("群屏蔽索引未就绪，fail-closed 跳过扇出 appKey={} groupId={}", appKey, groupId);
-            return Set.of();
+            log.error("群屏蔽索引未就绪，拒绝把空扇出记成完成 appKey={} groupId={}", appKey, groupId);
+            throw new GroupMembershipLoadException(
+                    "群屏蔽索引未就绪, appKey=" + appKey + ", groupId=" + groupId);
         }
         if (shielded.isEmpty()) {
             return memberIds;
@@ -205,38 +217,45 @@ public final class GroupMembershipSupport {
     }
 
     /**
-     * @return 已屏蔽成员；null 表示索引未就绪（调用方不得按未屏蔽放行）
+     * @return 本批已屏蔽成员；索引不可用时抛异常，禁止把未知状态当作无人屏蔽。
      */
-    private Set<String> loadShieldedMembersHot(String appKey, String groupId) {
-        String localKey = RelationLocalCache.groupShieldKey(appKey, groupId);
-        Set<String> cached = RelationLocalCache.GROUP_SHIELD.get(localKey);
-        if (cached != null) {
-            return cached;
-        }
-        String shieldKey = CacheConstant.buildGroupShieldCacheKey(appKey, groupId);
-        if (!hasGroupShieldInit(appKey, groupId)) {
-            rebuildShieldIndexSync(appKey, groupId);
-            if (!hasGroupShieldInit(appKey, groupId)) {
-                return null;
-            }
-        }
-        Map<Object, Object> shieldHash = infra.stringRedisTemplate.opsForHash().entries(shieldKey);
+    @SuppressWarnings("unchecked")
+    private Set<String> loadShieldedMembersHot(String appKey, String groupId, Set<String> memberIds) {
+        List<String> members = new ArrayList<>(memberIds);
         Set<String> shielded = new HashSet<>();
-        if (shieldHash != null) {
-            for (Map.Entry<Object, Object> entry : shieldHash.entrySet()) {
-                if (entry.getKey() == null) {
-                    continue;
-                }
-                String field = String.valueOf(entry.getKey());
-                if (!field.isBlank()) {
-                    shielded.add(field);
+        List<String> keys = List.of(CacheConstant.buildGroupShieldCacheKey(appKey, groupId),
+                CacheConstant.buildGroupShieldInitCacheKey(appKey, groupId));
+        // 只读当前扇出批次；INIT 与字段读取同槽原子完成，避免过期竞态被当作无人屏蔽。
+        for (int start = 0; start < members.size(); start += MessageConstant.GROUP_FANOUT_ONLINE_LOOKUP_BATCH) {
+            List<String> batch = members.subList(start,
+                    Math.min(start + MessageConstant.GROUP_FANOUT_ONLINE_LOOKUP_BATCH, members.size()));
+            List<String> flags = infra.stringRedisTemplate.execute(READ_SHIELD_BATCH, keys, batch.toArray());
+            if (flags == null || flags.isEmpty()) {
+                rebuildShieldIndexSync(appKey, groupId);
+                flags = infra.stringRedisTemplate.execute(READ_SHIELD_BATCH, keys, batch.toArray());
+            }
+            if (flags == null || flags.size() != batch.size()) {
+                throw new GroupMembershipLoadException("群屏蔽索引未就绪: " + groupId);
+            }
+            for (int i = 0; i < batch.size(); i++) {
+                if ("1".equals(flags.get(i))) {
+                    shielded.add(batch.get(i));
                 }
             }
         }
-        Set<String> snapshot = Set.copyOf(shielded);
-        RelationLocalCache.GROUP_SHIELD.put(localKey, snapshot);
-        return snapshot;
+        return shielded;
     }
+
+    /** 字段数由调用方限制；不读取或缓存整群屏蔽名单。 */
+    @SuppressWarnings("rawtypes")
+    private static final org.springframework.data.redis.core.script.DefaultRedisScript<List> READ_SHIELD_BATCH =
+            new org.springframework.data.redis.core.script.DefaultRedisScript<>("""
+                    if redis.call('EXISTS', KEYS[2]) == 0 then return {} end
+                    local values = redis.call('HMGET', KEYS[1], unpack(ARGV))
+                    local result = {}
+                    for i = 1, #ARGV do result[i] = values[i] and '1' or '0' end
+                    return result
+                    """, List.class);
 
     public long groupMemberCount(String appKey, String groupId) {
         if (hasGroupMemberInit(appKey, groupId)) {
@@ -343,38 +362,32 @@ public final class GroupMembershipSupport {
 
     private boolean writeShieldHashIfVersionMatch(String appKey, String groupId, List<GroupUserEntity> members,
                                                   String expectedVersion) {
-        String versionNow = currentRelationVersion(appKey, groupId);
-        if (!Objects.equals(expectedVersion == null ? "0" : expectedVersion, versionNow)) {
-            return false;
-        }
-        writeShieldHash(appKey, groupId, members);
-        // 写完后再比对一次，变了则删掉半成品初始化标记，避免错误「无屏蔽」
-        String versionAfter = currentRelationVersion(appKey, groupId);
-        if (!Objects.equals(expectedVersion == null ? "0" : expectedVersion, versionAfter)) {
-            deleteGroupShieldIndex(appKey, groupId);
-            return false;
-        }
-        return true;
-    }
-
-    private void writeShieldHash(String appKey, String groupId, List<GroupUserEntity> members) {
-        String key = CacheConstant.buildGroupShieldCacheKey(appKey, groupId);
-        Map<String, String> fields = new HashMap<>();
+        List<String> args = new ArrayList<>();
+        args.add(expectedVersion == null ? "0" : expectedVersion);
         if (members != null) {
             for (GroupUserEntity member : members) {
                 if (member != null && member.getUserId() != null
                         && YesOrNo.YES.getCode().equals(member.getShield())) {
-                    fields.put(member.getUserId(), "1");
+                    args.add(member.getUserId());
                 }
             }
         }
-        infra.stringRedisTemplate.delete(key);
-        if (!fields.isEmpty()) {
-            infra.stringRedisTemplate.opsForHash().putAll(key, fields);
-        }
-        infra.stringRedisTemplate.opsForValue().set(
-                CacheConstant.buildGroupShieldInitCacheKey(appKey, groupId), "1");
+        Long result = infra.stringRedisTemplate.execute(REBUILD_SHIELD_SCRIPT,
+                List.of(CacheConstant.buildGroupShieldCacheKey(appKey, groupId),
+                        CacheConstant.buildGroupShieldInitCacheKey(appKey, groupId),
+                        CacheConstant.buildGroupRelationVersionCacheKey(appKey, groupId)), args.toArray());
+        return Long.valueOf(1L).equals(result);
     }
+
+    /** 版本校验、替换和 INIT 在同槽完成，读者不会看到删除旧 Hash 后的半成品。 */
+    private static final DefaultRedisScript<Long> REBUILD_SHIELD_SCRIPT = new DefaultRedisScript<>("""
+            local version = redis.call('GET', KEYS[3]) or '0'
+            if version ~= ARGV[1] then return 0 end
+            redis.call('DEL', KEYS[1])
+            for i = 2, #ARGV do redis.call('HSET', KEYS[1], ARGV[i], '1') end
+            redis.call('SET', KEYS[2], '1')
+            return 1
+            """, Long.class);
 
     private boolean hasGroupShieldInit(String appKey, String groupId) {
         return Boolean.TRUE.equals(infra.stringRedisTemplate.hasKey(
@@ -450,9 +463,7 @@ public final class GroupMembershipSupport {
             try {
                 String versionBefore = currentRelationVersion(appKey, groupId);
                 List<GroupUserEntity> dbMembers = loadAllGroupUsersFromAuthority(appKey, groupId);
-                if (writeShieldHashIfVersionMatch(appKey, groupId, dbMembers, versionBefore)) {
-                    RelationLocalCache.evictGroupShieldIndex(appKey, groupId);
-                }
+                writeShieldHashIfVersionMatch(appKey, groupId, dbMembers, versionBefore);
             } catch (Exception e) {
                 log.warn("同步重建群屏蔽索引失败 groupId={}", groupId, e);
             }
@@ -952,10 +963,10 @@ public final class GroupMembershipSupport {
         }
 
         // 2. 将同步方法封装为 Supplier（供给型函数，无参有返回值）
-        // 注意：Supplier 中的逻辑会在 publishOn 指定的线程池中执行
+        // 注意：Supplier 中的逻辑会在 subscribeOn 指定的线程池中执行
         return Mono.fromSupplier(() -> getGroupEntityFromDatabases(appKey, groupId))
                 // 3. 切换到专用线程池执行同步任务（关键：避免阻塞 Reactor 核心线程）
-                .publishOn(Schedulers.fromExecutor(infra.dbExecutor()))
+                .subscribeOn(Schedulers.fromExecutor(infra.dbExecutor()))
                 // 4. 响应式异常处理：将同步方法抛出的 RuntimeException 转换为响应式错误信号
                 .onErrorResume(e -> {
                     log.error("响应式查询群组异常, appKey:{}, groupId:{}", appKey, groupId, e);
@@ -1049,7 +1060,7 @@ public final class GroupMembershipSupport {
 
     /**
      * 先在群聚合槽原子判定「已是成员 / 容量 / 写入」，再写用户加群索引（超限回滚群侧），最后写请求会话。
-     * 群成员与用户加群不在同一 Redis 槽，不能放进一条 Lua；用户侧失败必须补偿删掉刚写入的群成员。
+     * 两侧不在同槽。仅明确容量拒绝可按 owner 原子回滚；写入结果未知时保留关系供重入核对。
      */
     public BindGroupEnum bindGroup(Packet packet, String joiner, String groupId, String requestSessionId,
                                    long expireTime, int maxMembers, int maxPerUser,
@@ -1078,90 +1089,51 @@ public final class GroupMembershipSupport {
             return BindGroupEnum.USER_GROUP_LIMIT;
         }
 
-        boolean newGroupMember = false;
-        boolean relationCommitted = false;
+        String owner = java.util.UUID.randomUUID().toString();
+        String groupRoster = CacheConstant.buildGroupUserCacheKey(appKey, groupId);
+        String groupVersion = CacheConstant.buildGroupRelationVersionCacheKey(appKey, groupId);
+        String groupInit = CacheConstant.buildGroupUserInitCacheKey(appKey, groupId);
+        String userRoster = CacheConstant.buildUserGroupsCacheKey(appKey, joiner);
         try {
-            long groupAdd = RelationRosterRedis.addMemberIfCapacity(
-                infra.stringRedisTemplate,
-                CacheConstant.buildGroupUserCacheKey(appKey, groupId),
-                CacheConstant.buildGroupRelationVersionCacheKey(appKey, groupId),
-                CacheConstant.buildGroupUserInitCacheKey(appKey, groupId),
-                GroupUserPost.ORDINARY.value(),
-                joiner,
-                maxMembers);
-        if (groupAdd == RelationRosterRedis.ADD_CAPACITY_EXCEEDED) {
-            return BindGroupEnum.GROUP_FULL;
-        }
-        if (groupAdd != RelationRosterRedis.ADD_NEW && groupAdd != RelationRosterRedis.ADD_EXISTS) {
-            return BindGroupEnum.FAILED;
-        }
-        newGroupMember = groupAdd == RelationRosterRedis.ADD_NEW;
-        if (newGroupMember) {
-            long userAdd = RelationRosterRedis.addMemberIfCapacity(
-                    infra.stringRedisTemplate,
-                    CacheConstant.buildUserGroupsCacheKey(appKey, joiner),
+            long groupAdd = RelationRosterRedis.reserveMember(infra.stringRedisTemplate,
+                    groupRoster, groupVersion, groupInit, GroupUserPost.ORDINARY.value(), joiner, maxMembers, owner);
+            if (groupAdd == RelationRosterRedis.ADD_CAPACITY_EXCEEDED) {
+                return BindGroupEnum.GROUP_FULL;
+            }
+            // 已有群侧关系也必须检查用户侧容量，不能用无条件 add 绕过个人群数上限。
+            long userAdd = RelationRosterRedis.reserveMember(infra.stringRedisTemplate, userRoster,
                     CacheConstant.buildUserGroupsRelationVersionCacheKey(appKey, joiner),
                     CacheConstant.buildUserGroupsInitCacheKey(appKey, joiner),
-                    metadata.getIngress().getServerTime(),
-                    groupId,
-                    maxPerUser);
+                    metadata.getIngress().getServerTime(), groupId, maxPerUser, owner);
             if (userAdd == RelationRosterRedis.ADD_CAPACITY_EXCEEDED) {
-                rollbackGroupMemberAdd(appKey, groupId, joiner);
+                if (groupAdd == RelationRosterRedis.ADD_NEW) {
+                    RelationRosterRedis.rollbackReservedMember(infra.stringRedisTemplate,
+                            groupRoster, groupVersion, groupInit, joiner, owner);
+                }
                 return BindGroupEnum.USER_GROUP_LIMIT;
             }
-            if (userAdd != RelationRosterRedis.ADD_NEW && userAdd != RelationRosterRedis.ADD_EXISTS) {
-                rollbackGroupMemberAdd(appKey, groupId, joiner);
+            // 冻结先于持久化。即使旧请求暂停、新请求碰到容量上限，也不得删除已进入提交阶段的关系。
+            if (!RelationRosterRedis.protectReservedMember(infra.stringRedisTemplate, groupRoster, joiner)
+                    || !RelationRosterRedis.protectReservedMember(infra.stringRedisTemplate, userRoster, groupId)) {
                 return BindGroupEnum.FAILED;
             }
-        } else {
-            RelationRosterRedis.addMember(
-                    infra.stringRedisTemplate,
-                    CacheConstant.buildUserGroupsCacheKey(appKey, joiner),
-                    CacheConstant.buildUserGroupsRelationVersionCacheKey(appKey, joiner),
-                    CacheConstant.buildUserGroupsInitCacheKey(appKey, joiner),
-                    metadata.getIngress().getServerTime(),
-                    groupId);
-        }
-
-        boolean bound = session.saveMessageWithSession(packet, expireTime,
-                CacheConstant.buildGroupRequestSessionCacheKey(appKey, groupId, requestSessionId),
-                consumer, (ops, msg, ak, f, t) -> {
-                });
-        if (!bound) {
-            if (newGroupMember) {
-                rollbackGroupMemberAdd(appKey, groupId, joiner);
-                RelationRosterRedis.removeMember(
-                        infra.stringRedisTemplate,
-                        CacheConstant.buildUserGroupsCacheKey(appKey, joiner),
-                        CacheConstant.buildUserGroupsRelationVersionCacheKey(appKey, joiner),
-                        CacheConstant.buildUserGroupsInitCacheKey(appKey, joiner),
-                        groupId);
+            com.ouyunc.base.constant.enums.SaveMessageOutcomeEnum outcome = session.saveMessageWithSessionOutcome(
+                    packet, expireTime, CacheConstant.buildGroupRequestSessionCacheKey(appKey, groupId, requestSessionId),
+                    consumer, (ops, msg, ak, f, t) -> { });
+            if (!SessionMessagePersistenceSupport.isSaveAccepted(outcome)) {
+                // 网络异常、部分 Pipeline 写入或提交确认未知时保留预留，供同一请求重入。
+                // 绝不能根据进程内布尔值删除另一执行者已提交的关系。
+                return BindGroupEnum.FAILED;
             }
-            return BindGroupEnum.FAILED;
-        }
-        // 请求会话与消息已提交；后续本地缓存或通知失败不得再删除正式群关系。
-        relationCommitted = true;
-        RelationLocalCache.onGroupJoin(appKey, groupId, joiner);
-        RelationCacheInvalidatePublisher.publish(
-                RelationCacheInvalidateEvent.groupJoin(appKey, groupId, joiner));
-        return newGroupMember ? BindGroupEnum.SUCCESS : BindGroupEnum.ALREADY_MEMBER;
+            if (!RelationRosterRedis.confirmReservedMember(infra.stringRedisTemplate, groupRoster, joiner)
+                    || !RelationRosterRedis.confirmReservedMember(infra.stringRedisTemplate, userRoster, groupId)) {
+                return BindGroupEnum.FAILED;
+            }
+            RelationLocalCache.onGroupJoin(appKey, groupId, joiner);
+            RelationCacheInvalidatePublisher.publish(RelationCacheInvalidateEvent.groupJoin(appKey, groupId, joiner));
+            return groupAdd == RelationRosterRedis.ADD_NEW ? BindGroupEnum.SUCCESS : BindGroupEnum.ALREADY_MEMBER;
         } catch (Exception e) {
-            // 两个关系集合位于不同 Redis 槽，任一步异常都必须补偿首次新增的群侧记录。
-            // 已存在成员不删除，只由重试补齐用户侧反向索引。
-            if (newGroupMember && !relationCommitted) {
-                rollbackGroupMemberAdd(appKey, groupId, joiner);
-                try {
-                    RelationRosterRedis.removeMember(
-                            infra.stringRedisTemplate,
-                            CacheConstant.buildUserGroupsCacheKey(appKey, joiner),
-                            CacheConstant.buildUserGroupsRelationVersionCacheKey(appKey, joiner),
-                            CacheConstant.buildUserGroupsInitCacheKey(appKey, joiner), groupId);
-                } catch (Exception rollbackError) {
-                    log.error("回滚用户群反向索引失败 appKey={} groupId={} joiner={}",
-                            appKey, groupId, joiner, rollbackError);
-                }
-            }
-            log.error("绑定群关系异常 appKey={} groupId={} joiner={}", appKey, groupId, joiner, e);
+            log.error("绑定群关系结果未知，保留预留等待重试 appKey={} groupId={} joiner={}", appKey, groupId, joiner, e);
             return BindGroupEnum.FAILED;
         }
     }
@@ -1186,18 +1158,6 @@ public final class GroupMembershipSupport {
         }
     }
 
-    private void rollbackGroupMemberAdd(String appKey, String groupId, String joiner) {
-        try {
-            RelationRosterRedis.removeMember(
-                    infra.stringRedisTemplate,
-                    CacheConstant.buildGroupUserCacheKey(appKey, groupId),
-                    CacheConstant.buildGroupRelationVersionCacheKey(appKey, groupId),
-                    CacheConstant.buildGroupUserInitCacheKey(appKey, groupId),
-                    joiner);
-        } catch (Exception e) {
-            log.error("回滚群成员写入失败 appKey={} groupId={} joiner={}", appKey, groupId, joiner, e);
-        }
-    }
 
     /**
      * 群成员配置写入同群 Hash。整份 Hash 共用 TTL，刷新任一成员会顺延过期时间。

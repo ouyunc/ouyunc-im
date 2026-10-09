@@ -457,11 +457,10 @@ public enum LuaScriptEnum {
      * 关系 ZSET 带容量加入（同槽 zset/version/init）。
      * KEYS[1]=zset KEYS[2]=versionKey KEYS[3]=initKey
      * ARGV[1]=score ARGV[2]=member ARGV[3]=maxCount（负数不限制）
-     * 返回 1=新加入，2=已在名单（只改 score），0=超限未写入。
+     * 返回 1=新加入，2=已在名单（保留原角色和加入时间），0=超限未写入。
      */
     RELATION_ROSTER_ADD_IF_CAPACITY_SCRIPT("3", """
             if redis.call('ZSCORE', KEYS[1], ARGV[2]) ~= false then
-                redis.call('ZADD', KEYS[1], tonumber(ARGV[1]) or 0, ARGV[2])
                 return 2
             end
             local max = tonumber(ARGV[3])

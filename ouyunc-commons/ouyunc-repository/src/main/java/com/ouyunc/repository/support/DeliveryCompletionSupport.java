@@ -4,6 +4,9 @@ import com.ouyunc.base.constant.CacheConstant;
 import com.ouyunc.base.constant.MessageConstant;
 import com.ouyunc.base.constant.enums.MessageDeliveryChannelEnum;
 import com.ouyunc.base.packet.Packet;
+import com.ouyunc.base.model.ExternalDeliveryRecipient;
+import java.util.ArrayList;
+import java.util.List;
 import com.ouyunc.base.packet.message.Message;
 import com.ouyunc.core.context.MessageContext;
 import org.apache.commons.lang3.StringUtils;
@@ -60,23 +63,23 @@ public final class DeliveryCompletionSupport {
             return redis.call('PEXPIRE', KEYS[1], ARGV[2])
             """, Long.class);
 
-    /**
-     * 外渠任务只允许空/P → P，已确认的 C 不得回退。
-     * HGET 与 HSET 必须在同一脚本内，避免租约过期后旧执行者覆盖新确认。
-     * 返回 1 表示已写入 PENDING，0 表示已经是 CONFIRMED。
-     */
-    private static final DefaultRedisScript<Long> MARK_PENDING_SCRIPT = new DefaultRedisScript<>("""
-            local current = redis.call('HGET', KEYS[1], ARGV[1])
-            if current == ARGV[3] then return 0 end
-            redis.call('HSET', KEYS[1], ARGV[1], ARGV[2])
-            redis.call('PEXPIRE', KEYS[1], ARGV[4])
-            return 1
-            """, Long.class);
-
-    /** 确认只升级为 C，并与 TTL 同一脚本提交，避免只写状态、过期失败。 */
-    private static final DefaultRedisScript<Long> CONFIRM_SCRIPT = new DefaultRedisScript<>("""
-            redis.call('HSET', KEYS[1], ARGV[1], ARGV[2])
+    /** 按一个有界批次读取并写入 PENDING；返回仍需发布的原列表下标。 */
+    private static final DefaultRedisScript<List> MARK_PENDING_BATCH_SCRIPT = new DefaultRedisScript<>("""
+            local selected = {}
+            for i = 4, #ARGV do
+                if redis.call('HGET', KEYS[1], ARGV[i]) ~= ARGV[2] then
+                    redis.call('HSET', KEYS[1], ARGV[i], ARGV[1])
+                    selected[#selected + 1] = i - 3
+                end
+            end
             redis.call('PEXPIRE', KEYS[1], ARGV[3])
+            return selected
+            """, List.class);
+
+    /** 同批确认只升级为 C，TTL 与全部确认状态在一个脚本中提交。 */
+    private static final DefaultRedisScript<Long> CONFIRM_BATCH_SCRIPT = new DefaultRedisScript<>("""
+            for i = 3, #ARGV do redis.call('HSET', KEYS[1], ARGV[i], ARGV[1]) end
+            redis.call('PEXPIRE', KEYS[1], ARGV[2])
             return 1
             """, Long.class);
 
@@ -187,15 +190,32 @@ public final class DeliveryCompletionSupport {
      * 发布前写入。已经确认的收件人返回 false，调用方不得再次发布。
      */
     public boolean markExternalPending(Packet packet, String recipientId, MessageDeliveryChannelEnum channel) {
-        String key = taskKey(packet);
-        String field = taskField(recipientId, channel);
-        if (key == null || field == null) {
-            return false;
+        return !markExternalPendingBatch(packet, List.of(new ExternalDeliveryRecipient(recipientId, channel))).isEmpty();
+    }
+
+    /** 一次往返完成本批判重和占位，不再逐人先查询再写。 */
+    public List<ExternalDeliveryRecipient> markExternalPendingBatch(Packet packet,
+                                                                  List<ExternalDeliveryRecipient> recipients) {
+        if (recipients.isEmpty()) {
+            return List.of();
         }
-        Long written = redis.execute(MARK_PENDING_SCRIPT, java.util.List.of(key),
-                field, TASK_PENDING, TASK_CONFIRMED,
-                String.valueOf(MessageContext.messageRecoveryTtlMillis()));
-        return Long.valueOf(1L).equals(written);
+        String key = requireTaskKey(packet, recipients);
+        List<String> args = new ArrayList<>(recipients.size() + 3);
+        args.add(TASK_PENDING);
+        args.add(TASK_CONFIRMED);
+        args.add(String.valueOf(MessageContext.messageRecoveryTtlMillis()));
+        for (ExternalDeliveryRecipient recipient : recipients) {
+            args.add(taskField(recipient.recipientId(), recipient.channel()));
+        }
+        List<?> selected = redis.execute(MARK_PENDING_BATCH_SCRIPT, List.of(key), args.toArray());
+        if (selected == null) {
+            throw new IllegalStateException("外渠批量占位结果未知");
+        }
+        List<ExternalDeliveryRecipient> pending = new ArrayList<>(selected.size());
+        for (Object index : selected) {
+            pending.add(recipients.get(Math.toIntExact(((Number) index).longValue()) - 1));
+        }
+        return pending;
     }
 
     public boolean isExternalConfirmed(Packet packet, String recipientId, MessageDeliveryChannelEnum channel) {
@@ -208,14 +228,37 @@ public final class DeliveryCompletionSupport {
     }
 
     public void confirmExternal(Packet packet, String recipientId, MessageDeliveryChannelEnum channel) {
-        String key = taskKey(packet);
-        String field = taskField(recipientId, channel);
-        if (key == null || field == null) {
-            log.warn("外渠完成记录缺少身份, recipientId={}", recipientId);
+        confirmExternalBatch(packet, List.of(new ExternalDeliveryRecipient(recipientId, channel)));
+    }
+
+    /** 仅传入已经收到 broker 成功确认的收件人；批量大小受与发布相同的上限约束。 */
+    public void confirmExternalBatch(Packet packet, List<ExternalDeliveryRecipient> recipients) {
+        if (recipients.isEmpty()) {
             return;
         }
-        redis.execute(CONFIRM_SCRIPT, java.util.List.of(key),
-                field, TASK_CONFIRMED, String.valueOf(MessageContext.messageRecoveryTtlMillis()));
+        String key = requireTaskKey(packet, recipients);
+        List<String> args = new ArrayList<>(recipients.size() + 2);
+        args.add(TASK_CONFIRMED);
+        args.add(String.valueOf(MessageContext.messageRecoveryTtlMillis()));
+        for (ExternalDeliveryRecipient recipient : recipients) {
+            args.add(taskField(recipient.recipientId(), recipient.channel()));
+        }
+        if (!Long.valueOf(1L).equals(redis.execute(CONFIRM_BATCH_SCRIPT, List.of(key), args.toArray()))) {
+            throw new IllegalStateException("外渠批量确认结果未知");
+        }
+    }
+
+    private static String requireTaskKey(Packet packet, List<ExternalDeliveryRecipient> recipients) {
+        String key = taskKey(packet);
+        if (key == null || recipients.size() > MessageConstant.GROUP_EXTERNAL_CHANNEL_CONFIRM_BATCH) {
+            throw new IllegalArgumentException("外渠任务身份缺失或批次超限");
+        }
+        for (ExternalDeliveryRecipient recipient : recipients) {
+            if (recipient == null || taskField(recipient.recipientId(), recipient.channel()) == null) {
+                throw new IllegalArgumentException("外渠收件人身份缺失");
+            }
+        }
+        return key;
     }
 
     /** 所有业务的完成证明覆盖最大重试期，不再按消息正文热缓存淘汰。 */

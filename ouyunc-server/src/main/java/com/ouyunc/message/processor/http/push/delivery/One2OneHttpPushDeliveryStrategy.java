@@ -85,12 +85,6 @@ public final class One2OneHttpPushDeliveryStrategy implements HttpProcessor {
                                 "单聊消息写入会话失败", packet);
                         return Mono.just(false);
                     }
-                    try {
-                        DefaultRepository.INSTANCE.saveLastMessageForSession(sessionId, packet,
-                                MessageConstant.CACHE_SESSION_LAST_MESSAGE_KEY_EXPIRE_TIMESTAMP, TimeUnit.MILLISECONDS);
-                    } catch (Exception e) {
-                        log.warn("HTTP 推送更新单聊最后消息失败，继续投递 packetId={}", packet.getPacketId(), e);
-                    }
                     completeChatDelivery(packet);
                     return Mono.just(true);
                 })
@@ -149,6 +143,10 @@ public final class One2OneHttpPushDeliveryStrategy implements HttpProcessor {
             } else if (MessageContentTypeEnum.WITHDRAW_CONTENT.getType() == contentType) {
                 MessageDeliveryPlanner.deliverPeerMessage(packet, true);
             } else {
+                // QoS 可先于未读补偿提交；HTTP 恢复绕过 save 时也必须完成该索引。
+                if (!DefaultRepository.INSTANCE.repairOne2OneUnread(packet)) {
+                    return Boolean.FALSE;
+                }
                 completeChatDelivery(packet);
             }
             return Boolean.TRUE;
@@ -158,6 +156,10 @@ public final class One2OneHttpPushDeliveryStrategy implements HttpProcessor {
     /** 首次写入和重入都先确认水位，失败不会写首次投递完成标记。 */
     private static void completeChatDelivery(Packet packet) {
         CommittedDelivery.run(packet, () -> {
+            // 派生索引失败时保留未完成状态，首次执行与重入使用相同的修复路径。
+            DefaultRepository.INSTANCE.saveLastMessageForSession(
+                    IdentityUtil.sessionId(packet.getMessage().getFrom(), packet.getMessage().getTo()), packet,
+                    MessageConstant.CACHE_SESSION_LAST_MESSAGE_KEY_EXPIRE_TIMESTAMP, TimeUnit.MILLISECONDS);
             SenderReadCompletionSupport.complete(packet, IdentityType.ONE_2_ONE);
             MessageDeliveryPlanner.deliverPeerMessage(packet, false);
         });

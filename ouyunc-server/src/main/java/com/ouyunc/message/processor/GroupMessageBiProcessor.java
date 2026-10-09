@@ -165,13 +165,8 @@ public final class GroupMessageBiProcessor extends AbstractMessageBiProcessor<By
     /** 首次写入和 COMMITTED 重入共用。已完成的扇出不会再次推送。 */
     private void completeGroupDelivery(Packet packet) {
         CommittedDelivery.run(packet, lease -> {
-            try {
-                repository().saveLastMessageForSession(packet.getMessage().getTo(), packet,
-                        MessageConstant.CACHE_SESSION_LAST_MESSAGE_KEY_EXPIRE_TIMESTAMP, TimeUnit.MILLISECONDS);
-            } catch (Exception e) {
-                // 最后消息是可重建派生索引，失败不能阻断已提交消息的实时投递。
-                log.warn("更新群聊最后消息失败，继续投递 packetId={}", packet.getPacketId(), e);
-            }
+            repository().saveLastMessageForSession(packet.getMessage().getTo(), packet,
+                    MessageConstant.CACHE_SESSION_LAST_MESSAGE_KEY_EXPIRE_TIMESTAMP, TimeUnit.MILLISECONDS);
             SenderReadCompletionSupport.complete(packet, IdentityType.GROUP);
             deliver(packet, lease);
         });
@@ -266,6 +261,17 @@ public final class GroupMessageBiProcessor extends AbstractMessageBiProcessor<By
     }
 
     private void deliver(Packet packet, CommittedDelivery.DeliveryLease lease) {
+        try {
+            deliverByPushMode(packet, lease);
+        } catch (GroupMembershipSupport.GroupMembershipLoadException e) {
+            // 成员名单或屏蔽索引未就绪。名单路径里已经登记过补投，这里 putIfAbsent 合并成一条。
+            // 必须继续抛出：CommittedDelivery 只有看到异常才 abort，否则会把这次空扇出写成 done。
+            scheduleFanoutRecovery(packet);
+            throw e;
+        }
+    }
+
+    private void deliverByPushMode(Packet packet, CommittedDelivery.DeliveryLease lease) {
         Message message = packet.getMessage();
         String appKey = message.getMetadata().getIngress().getAppKey();
         ClientInfo clientInfo = MessageServerContext.localClientInfo(appKey, message.getFrom());

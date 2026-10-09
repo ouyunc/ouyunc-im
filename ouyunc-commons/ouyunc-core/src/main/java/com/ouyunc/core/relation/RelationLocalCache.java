@@ -8,7 +8,6 @@ import com.ouyunc.cache.local.caffeine.CaffeineLocalCache;
 import com.ouyunc.core.context.MessageContext;
 import org.apache.commons.lang3.StringUtils;
 
-import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicLong;
@@ -28,17 +27,6 @@ public final class RelationLocalCache {
     public static final Cache<String, Boolean> SHIELD = newBooleanCache("relationShield");
 
     /**
-     * 群屏蔽成员集合。空 Set 表示索引已就绪且无人屏蔽。
-     */
-    public static final Cache<String, Set<String>> GROUP_SHIELD = CaffeineLocalCache.wrap(
-            "relationGroupShield",
-            Caffeine.newBuilder()
-                    .maximumSize(MessageConstant.RELATION_PRESENCE_CACHE_MAX_SIZE)
-                    .expireAfterWrite(MessageConstant.RELATION_PRESENCE_CACHE_EXPIRE_SECONDS, TimeUnit.SECONDS)
-                    .recordStats()
-                    .build());
-
-    /**
      * 本机群成员布尔缓存世代。解散群时递增；键含 epoch，旧世代键自然 miss。
      */
     private static final ConcurrentHashMap<String, AtomicLong> GROUP_MEMBER_EPOCH = new ConcurrentHashMap<>();
@@ -50,10 +38,6 @@ public final class RelationLocalCache {
     public static String groupMemberKey(String appKey, String groupId, String memberId) {
         long epoch = currentGroupMemberEpoch(appKey, groupId);
         return CacheConstant.buildGroupUserCacheKey(appKey, groupId) + ":" + memberId + "@" + epoch;
-    }
-
-    public static String groupShieldKey(String appKey, String groupId) {
-        return CacheConstant.buildGroupShieldCacheKey(appKey, groupId);
     }
 
     public static String blacklistKey(String appKey, String ownerId, String targetId) {
@@ -79,7 +63,6 @@ public final class RelationLocalCache {
         }
         markGroupMember(appKey, groupId, memberId, true);
         MessageContext.groupUserIdentityCache.delete(CacheConstant.buildGroupUserCacheKey(appKey, groupId));
-        evictGroupShieldIndex(appKey, groupId);
     }
 
     public static void markBlacklist(String appKey, String ownerId, String targetId, boolean listed) {
@@ -151,7 +134,6 @@ public final class RelationLocalCache {
         markGroupMember(appKey, groupId, memberId, false);
         MessageContext.groupUserEntityCache.delete(CacheConstant.buildGroupUserConfigLocalCacheKey(appKey, groupId, memberId));
         MessageContext.groupUserIdentityCache.delete(CacheConstant.buildGroupUserCacheKey(appKey, groupId));
-        evictGroupShieldIndex(appKey, groupId);
     }
 
     /**
@@ -162,7 +144,6 @@ public final class RelationLocalCache {
             return;
         }
         MessageContext.groupUserEntityCache.delete(CacheConstant.buildGroupUserConfigLocalCacheKey(appKey, groupId, memberId));
-        evictGroupShieldIndex(appKey, groupId);
     }
 
     /**
@@ -185,14 +166,6 @@ public final class RelationLocalCache {
         bumpGroupMemberEpoch(appKey, groupId);
         MessageContext.groupEntityCache.delete(CacheConstant.buildGroupCacheKey(appKey, groupId));
         MessageContext.groupUserIdentityCache.delete(CacheConstant.buildGroupUserCacheKey(appKey, groupId));
-        evictGroupShieldIndex(appKey, groupId);
-    }
-
-    public static void evictGroupShieldIndex(String appKey, String groupId) {
-        if (StringUtils.isAnyBlank(appKey, groupId)) {
-            return;
-        }
-        GROUP_SHIELD.delete(groupShieldKey(appKey, groupId));
     }
 
     private static long currentGroupMemberEpoch(String appKey, String groupId) {

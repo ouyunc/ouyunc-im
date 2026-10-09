@@ -361,6 +361,9 @@ public class MessageConstant {
      */
     public static final int IM_NODE_LEASE_REFRESH_SECONDS = 2;
 
+    /** 发现读取与两秒租约续期解耦；快照有效期不延长，新节点最迟下一发现周期可见。 */
+    public static final int IM_NODE_DISCOVERY_REFRESH_SECONDS = 4;
+
     /** 单机登录与配额 TTL 续期间隔，沿用原心跳频率。 */
     public static final int IM_STANDALONE_SESSION_REFRESH_SECONDS = IM_NODE_LEASE_REFRESH_SECONDS;
 
@@ -492,6 +495,11 @@ public class MessageConstant {
 
     /** 单连接有序队列估算积压字节上限。 */
     public static final long CHANNEL_ORDERED_PENDING_BYTES_MAX = 16L * 1024 * 1024;
+
+    /** 节点队列预算不超过最大堆的八分之一，且至多 256 MiB；每个排队对象至少计 1 KiB。 */
+    public static final long CHANNEL_ORDERED_NODE_BYTES_MAX = Math.min(256L * 1024 * 1024,
+            Math.max(1024L, Runtime.getRuntime().maxMemory() / 8));
+    public static final long CHANNEL_ORDERED_TASK_OVERHEAD_BYTES = 1024L;
 
     /** 任务从入队到开始执行的最长等待时间。 */
     public static final long CHANNEL_ORDERED_MAX_QUEUE_WAIT_MS = 30_000L;

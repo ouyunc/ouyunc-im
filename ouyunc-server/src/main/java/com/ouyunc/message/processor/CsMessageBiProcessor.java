@@ -175,11 +175,7 @@ public final class CsMessageBiProcessor extends AbstractMessageBiProcessor<Byte>
     }
 
     private void afterCsFreshWrite(Packet packet, CsImSessionRoute route) {
-        try {
-            CsHelper.saveChatLastMessage(repository(), route, packet);
-        } catch (Exception e) {
-            log.warn("更新客服会话最后消息失败，继续投递 packetId={}", packet.getPacketId(), e);
-        }
+        CsHelper.saveChatLastMessage(repository(), route, packet);
         CsHelper.notifyAfterSave(packet, route);
         SenderReadCompletionSupport.completeCs(packet, route);
         CsHelper.deliverMessage(packet, route, false);

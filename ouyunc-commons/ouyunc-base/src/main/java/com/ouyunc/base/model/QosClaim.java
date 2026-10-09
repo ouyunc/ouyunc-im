@@ -15,7 +15,7 @@ public final class QosClaim implements Serializable, Cloneable {
     private String qosClaimIdentity;
     /** PENDING 占位持有者。commit 和 release 必须带回，commit 成功后清空。 */
     private String qosOwnerToken;
-    /** SAVE 归档已按正式 packetId 发出。此后失败不得释放占位。 */
+    /** 正文已开始写入或 SAVE 归档已发出；此后失败不得释放占位、更换正式 packetId。 */
     private boolean qosArchiveBound;
     /** 可信身份建立后、业务改写前固定的原始请求指纹；聊天和控制消息的幂等校验统一使用。 */
     private String qosPayloadHash;

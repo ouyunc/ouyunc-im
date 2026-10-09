@@ -94,12 +94,12 @@ public final class SessionMessagePersistenceSupport {
 
     /**
      * 热 key + 会话索引 Pipeline 落库。QoS 消息先按登录身份 + client messageId 原子抢占 PENDING，
-     * Pipeline 成功后再 {@code COMMIT_SCRIPT} 提交为 COMMITTED；失败则 compare-and-delete 释放本次占位。
+     * Pipeline 成功后再 {@code COMMIT_SCRIPT} 提交为 COMMITTED；正文写入开始后失败保留正式 ID。
      * 返回 {@link SaveMessageOutcomeEnum#DUPLICATE} 仅可能来自已提交记录，占位（PENDING）绝不视为成功。
      *
      * <p>主体/会话键等必需字段必须在入队前序列化成功；{@code consumer}/{@code extraOperation}
-     * 视为关键副作用（好友/群关系等），异常直接导致 FAILED，不可吞掉后仍 ACK。
-     * Pipeline 只降低往返，不提供多命令事务回滚；closePipeline 异常或空结果一律失败。
+     * 视为关键副作用（好友/群关系等），异常返回 UNKNOWN，不可吞掉后仍 ACK。
+     * Pipeline 只降低往返，不提供多命令事务回滚；closePipeline 异常或空结果一律返回 UNKNOWN。
      * {@code COMMIT} 被拒绝表示已失去占位，不得删除共享 canonical 热数据（接管方可能已写完）。
      *
      * <p>消息正文 key 由本方法在 QoS 认领并对齐 canonical packetId 之后生成，调用方不得提前传入，
@@ -117,6 +117,7 @@ public final class SessionMessagePersistenceSupport {
         RedisConnectionFactory connectionFactory = infra.redisTemplate.getConnectionFactory();
         RedisSerializer<String> stringSerializer = infra.stringSerializer;
         boolean qosSave = false;
+        boolean writeAttempted = false;
         String qosOwnerToken = null;
         String appKey = null;
         String qosClaimIdentity = null;
@@ -201,6 +202,7 @@ public final class SessionMessagePersistenceSupport {
             byte[] packetIdBytes = serializeOrThrow(stringSerializer, formatPacketId, "PacketId");
             byte[] sessionKeyBytes = serializeOrThrow(stringSerializer, sessionKey, "sessionKey");
 
+            writeAttempted = true;
             conn.openPipeline();
             log.debug("Pipeline 已开启");
 
@@ -231,13 +233,13 @@ public final class SessionMessagePersistenceSupport {
                 forceClosePipeline(conn);
                 releaseQosClaimQuietly(qosSave, appKey, packet.getPacketId(), qosClaimIdentity,
                         clientMessageId, qosOwnerToken, metadata);
-                return SaveMessageOutcomeEnum.FAILED;
+                return SaveMessageOutcomeEnum.UNKNOWN;
             }
 
             if (CollectionUtils.isEmpty(results)) {
                 releaseQosClaimQuietly(qosSave, appKey, packet.getPacketId(), qosClaimIdentity,
                         clientMessageId, qosOwnerToken, metadata);
-                return SaveMessageOutcomeEnum.FAILED;
+                return SaveMessageOutcomeEnum.UNKNOWN;
             }
             QosIdempotencyHelper.CommitOutcome commitOutcome = qosSave
                     ? QosIdempotencyHelper.commit(infra.redisTemplate, appKey, packet.getPacketId(),
@@ -254,7 +256,7 @@ public final class SessionMessagePersistenceSupport {
                             appKey, packet.getPacketId(), verifiedState);
                     // 不能删除热数据或释放占位：Redis 可能已经提交成功但响应丢失。
                     clearQosClaimMarks(metadata);
-                    return SaveMessageOutcomeEnum.FAILED;
+                    return SaveMessageOutcomeEnum.UNKNOWN;
                 }
             }
             if (commitOutcome == QosIdempotencyHelper.CommitOutcome.REJECTED) {
@@ -276,7 +278,7 @@ public final class SessionMessagePersistenceSupport {
             log.error("Redis Pipeline 操作异常: ", e);
             releaseQosClaimQuietly(qosSave, appKey, packet.getPacketId(), qosClaimIdentity,
                     clientMessageId, qosOwnerToken, metadataFromPacket(packet));
-            return SaveMessageOutcomeEnum.FAILED;
+            return writeAttempted ? SaveMessageOutcomeEnum.UNKNOWN : SaveMessageOutcomeEnum.FAILED;
         }
     }
 
@@ -292,6 +294,8 @@ public final class SessionMessagePersistenceSupport {
         byte[] key = serializeOrThrow(infra.stringSerializer,
                 CacheConstant.buildMessageCacheKey(appKey, packet.getPacketId()), "messageKey");
         byte[] value = serializeOrThrow(infra.valueSerializer, packet, "packet");
+        // SET 响应丢失也可能已经写入；此后保留 canonical 占位，禁止失败路径换 ID 重做。
+        currentMetadata.ensureQosClaim().setQosArchiveBound(true);
         Boolean inserted = conn.stringCommands().set(key, value,
                 expireTime > 0 ? Expiration.milliseconds(expireTime) : Expiration.persistent(),
                 RedisStringCommands.SetOption.SET_IF_ABSENT);

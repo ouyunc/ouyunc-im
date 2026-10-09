@@ -8,6 +8,11 @@ import com.ouyunc.base.utils.IdentityUtil;
  **/
 public class CacheConstant {
 
+    /** 入群过程中新增关系的 owner；继承名单 key 的 Redis Cluster 哈希标签。 */
+    public static String buildRelationReservationCacheKey(String rosterKey) {
+        return rosterKey + ":reservation";
+    }
+
     /***
      * 冒号
      */

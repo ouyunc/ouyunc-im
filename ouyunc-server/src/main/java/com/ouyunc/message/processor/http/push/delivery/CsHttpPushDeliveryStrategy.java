@@ -95,6 +95,9 @@ public final class CsHttpPushDeliveryStrategy implements HttpProcessor {
                 }
                 route = prepared.route();
             }
+            if (!DefaultRepository.INSTANCE.repairCsTicketUnread(packet, route)) {
+                return Boolean.FALSE;
+            }
             completeChatDelivery(packet, route);
             return Boolean.TRUE;
         });
@@ -126,11 +129,6 @@ public final class CsHttpPushDeliveryStrategy implements HttpProcessor {
                                 "客服消息写入 ticket 失败", packet);
                         return Mono.just(false);
                     }
-                    try {
-                        CsHelper.saveChatLastMessage(DefaultRepository.INSTANCE, route, packet);
-                    } catch (Exception e) {
-                        log.warn("HTTP 推送更新客服最后消息失败，继续投递 packetId={}", packet.getPacketId(), e);
-                    }
                     completeChatDelivery(packet, route);
                     return Mono.just(true);
                 })
@@ -146,6 +144,8 @@ public final class CsHttpPushDeliveryStrategy implements HttpProcessor {
     /** 活动通知、水位与投递均纳入可重入完成器，任一失败都不得提前标记完成。 */
     private static void completeChatDelivery(Packet packet, CsImSessionRoute route) {
         CommittedDelivery.run(packet, () -> {
+            // 派生索引失败时保留未完成状态，首次执行与重入使用相同的修复路径。
+            CsHelper.saveChatLastMessage(DefaultRepository.INSTANCE, route, packet);
             CsHelper.notifyAfterSave(packet, route);
             SenderReadCompletionSupport.completeCs(packet, route);
             CsHelper.deliverMessage(packet, route, false);

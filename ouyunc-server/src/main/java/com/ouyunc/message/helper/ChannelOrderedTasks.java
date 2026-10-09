@@ -13,6 +13,7 @@ import reactor.core.publisher.Mono;
 import java.util.ArrayDeque;
 import java.util.Queue;
 import java.util.concurrent.*;
+import java.util.concurrent.atomic.AtomicLong;
 import java.util.function.Supplier;
 
 /**
@@ -22,6 +23,24 @@ import java.util.function.Supplier;
 public final class ChannelOrderedTasks {
     private static final Logger log = LoggerFactory.getLogger(ChannelOrderedTasks.class);
     private static final AttributeKey<SerialQueue> QUEUE_KEY = AttributeKey.valueOf("CHANNEL_ORDERED_TASK_QUEUE");
+    private static final AtomicLong NODE_RETAINED_BYTES = new AtomicLong();
+
+    /** CAS 准入不等待；慢连接不能通过数量累积绕过节点内存预算。 */
+    private static boolean reserveQueueBytes(long bytes) {
+        long current;
+        do {
+            current = NODE_RETAINED_BYTES.get();
+            if (bytes > MessageConstant.CHANNEL_ORDERED_NODE_BYTES_MAX - current) {
+                return false;
+            }
+        } while (!NODE_RETAINED_BYTES.compareAndSet(current, current + bytes));
+        return true;
+    }
+
+    /** 包含排队及已开始但尚未完成的异步任务，避免出队后绕过节点预算。 */
+    public static long retainedQueueBytes() {
+        return NODE_RETAINED_BYTES.get();
+    }
 
     private ChannelOrderedTasks() { }
 
@@ -56,7 +75,8 @@ public final class ChannelOrderedTasks {
             }
         }
         queue.offer(new Task(task, deadlineMs > 0 ? deadlineMs : MessageConstant.CHANNEL_ORDERED_TASK_DEADLINE_MS,
-                Math.max(0L, estimatedBytes), System.currentTimeMillis()));
+                Math.max(0L, Math.min(estimatedBytes, MessageConstant.CHANNEL_ORDERED_PENDING_BYTES_MAX))
+                        + MessageConstant.CHANNEL_ORDERED_TASK_OVERHEAD_BYTES, System.currentTimeMillis()));
     }
 
     public static CompletionStage<Void> toVoidStage(Mono<Void> mono) {
@@ -104,7 +124,8 @@ public final class ChannelOrderedTasks {
                     return;
                 }
                 overflow = pending.size() >= MessageConstant.CHANNEL_ORDERED_TASK_MAX
-                        || pendingBytes + task.estimatedBytes() > MessageConstant.CHANNEL_ORDERED_PENDING_BYTES_MAX;
+                        || pendingBytes + task.estimatedBytes() > MessageConstant.CHANNEL_ORDERED_PENDING_BYTES_MAX
+                        || !reserveQueueBytes(task.estimatedBytes());
                 if (!overflow) {
                     pending.add(task);
                     pendingBytes += task.estimatedBytes();
@@ -155,6 +176,7 @@ public final class ChannelOrderedTasks {
                 pendingBytes = Math.max(0L, pendingBytes - task.estimatedBytes());
                 if (System.currentTimeMillis() - task.enqueuedAtMs()
                         > MessageConstant.CHANNEL_ORDERED_MAX_QUEUE_WAIT_MS) {
+                    NODE_RETAINED_BYTES.addAndGet(-task.estimatedBytes());
                     execution = null;
                     queueWaitTimeout = true;
                 } else {
@@ -183,6 +205,7 @@ public final class ChannelOrderedTasks {
                 }
                 stopped = true;
                 pending.clear();
+                NODE_RETAINED_BYTES.addAndGet(-pendingBytes);
                 pendingBytes = 0L;
                 execution = current;
                 current = null;
@@ -253,6 +276,7 @@ public final class ChannelOrderedTasks {
                         return;
                     }
                     settled = true;
+                    NODE_RETAINED_BYTES.addAndGet(-task.estimatedBytes());
                     deadline.cancel();
                 }
                 if (error != null) {
@@ -273,6 +297,7 @@ public final class ChannelOrderedTasks {
                         return false;
                     }
                     settled = true;
+                    NODE_RETAINED_BYTES.addAndGet(-task.estimatedBytes());
                     if (deadline != null) {
                         deadline.cancel();
                     }

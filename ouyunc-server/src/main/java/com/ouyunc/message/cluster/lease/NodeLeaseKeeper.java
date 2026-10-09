@@ -296,6 +296,11 @@ public final class NodeLeaseKeeper {
         long observedAt = System.nanoTime();
         publishLease(run);
         publishConnectionsIfRequired(run);
+        // 租约仍每两秒续期，稳定期不再每拍读取全体节点；不刷新旧快照的时间戳。
+        if (run.snapshot.isFresh() && observedAt - run.lastDiscoveryNanos
+                < TimeUnit.SECONDS.toNanos(MessageConstant.IM_NODE_DISCOVERY_REFRESH_SECONDS)) {
+            return;
+        }
         NodeLeaseSnapshot snapshot = new NodeLeaseSnapshot(loadLiveLeases(), observedAt, true);
         NodeLeasePayload local = snapshot.leases().get(run.nodeId);
         if (!snapshot.isFresh() || local == null || !run.payload.getOwnerToken().equals(local.getOwnerToken())) {
@@ -305,6 +310,7 @@ public final class NodeLeaseKeeper {
             return;
         }
         run.snapshot = snapshot;
+        run.lastDiscoveryNanos = observedAt;
         run.redisFailStreak = 0;
         if (MessageServerContext.REDIS_ISOLATION_DRAINING.get()) {
             MessageServerContext.exitRedisIsolationDrain();
@@ -412,6 +418,7 @@ public final class NodeLeaseKeeper {
         private final AtomicBoolean quotaMaintenancePending = new AtomicBoolean();
         private volatile NodeLeaseSnapshot snapshot = new NodeLeaseSnapshot(Map.of(), 0L, false);
         private volatile long lastConnPublishNanos;
+        private long lastDiscoveryNanos;
         private volatile long lastPublishedConnVersion;
         private TimerTaskWrapper heartbeatTask;
         private int redisFailStreak;

@@ -143,14 +143,9 @@ public final class One2OneMessageBiProcessor extends AbstractMessageBiProcessor<
     /** 首次写入和 COMMITTED 重入共用。已完成的扇出不会再次推送。 */
     private void completeOne2OneDelivery(Packet packet) {
         CommittedDelivery.run(packet, () -> {
-            try {
-                repository().saveLastMessageForSession(
-                        IdentityUtil.sessionId(packet.getMessage().getFrom(), packet.getMessage().getTo()),
-                        packet, MessageConstant.CACHE_SESSION_LAST_MESSAGE_KEY_EXPIRE_TIMESTAMP, TimeUnit.MILLISECONDS);
-            } catch (Exception e) {
-                // 最后消息是可重建派生索引，失败不能阻断已提交消息的实时投递。
-                log.warn("更新单聊最后消息失败，继续投递 packetId={}", packet.getPacketId(), e);
-            }
+            repository().saveLastMessageForSession(
+                    IdentityUtil.sessionId(packet.getMessage().getFrom(), packet.getMessage().getTo()),
+                    packet, MessageConstant.CACHE_SESSION_LAST_MESSAGE_KEY_EXPIRE_TIMESTAMP, TimeUnit.MILLISECONDS);
             SenderReadCompletionSupport.complete(packet, IdentityType.ONE_2_ONE);
             deliver(packet, false);
         });

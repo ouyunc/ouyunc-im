@@ -288,14 +288,8 @@ public final class CsHelper {
         }
         log.debug("客服外渠下行, ticketId={}, to={}, channel={}, packetId={}",
                 route.ticketId(), recipientId, channel.getKey(), packet.getPacketId());
-        if (DefaultRepository.INSTANCE.isExternalRecipientConfirmed(packet, recipientId, channel)) {
-            return;
-        }
         if (!DefaultRepository.INSTANCE.markExternalRecipientPending(packet, recipientId, channel)) {
-            if (DefaultRepository.INSTANCE.isExternalRecipientConfirmed(packet, recipientId, channel)) {
-                return;
-            }
-            throw new ExternalDeliveryConfirmException("客服外渠任务身份不足，无法记录恢复标记", null);
+            return;
         }
         java.util.concurrent.CompletableFuture<?> confirmed =
                 DefaultRepository.INSTANCE.publishExternalChannelOutbound(outbound, recipientId, channel);

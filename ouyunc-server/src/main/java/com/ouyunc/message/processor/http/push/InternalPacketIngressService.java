@@ -304,7 +304,7 @@ public final class InternalPacketIngressService {
         return claimAndExecute(packet, appKey, messageId, packetIdStr);
     }
 
-    /** 先确认历史完成或恢复已提交客服消息；返回 null 才进入当前业务校验。 */
+    /** 先确认历史完成或恢复已提交聊天消息；返回 null 才进入当前业务校验。 */
     private static HttpResponseResult<MessagePushResponse> resolveHistoricalResult(
             Packet packet, String appKey, String messageId) {
         PushIdempotencySupport.ClaimResult previous = PushIdempotencySupport.lookup(
@@ -316,18 +316,20 @@ public final class InternalPacketIngressService {
                     messageId, null, MessageSubmissionStatusEnum.REJECTED, ExceptionCodeEnum.MESSAGE_ID_CONFLICT.getMessage()));
             case PushIdempotencySupport.CLAIM_FAILED -> HttpResponseResult.success(buildResponse(
                     messageId, null, MessageSubmissionStatusEnum.UNKNOWN, "历史受理结果暂不可确认，请使用同一 messageId 重试"));
-            default -> recoverCommittedCustomerService(packet, appKey, messageId);
+            default -> recoverCommittedChat(packet, appKey, messageId);
         };
     }
 
     /**
-     * HTTP 尚未完成但 QoS 已提交时，只恢复首次持久化的客服普通消息。
+     * HTTP 尚未完成但 QoS 已提交时，只恢复首次持久化的普通聊天消息。
      * 判重同时校验原始指纹和消息类型；归档存在本身不能证明业务提交。
      * 控制消息仍走各自的目标快照恢复，禁止当作普通聊天再次投递。
      */
-    private static HttpResponseResult<MessagePushResponse> recoverCommittedCustomerService(
+    private static HttpResponseResult<MessagePushResponse> recoverCommittedChat(
             Packet packet, String appKey, String messageId) {
-        if (packet.getMessageType() != MessageTypeEnum.CUSTOMER_SERVICE.getType()
+        if ((packet.getMessageType() != MessageTypeEnum.CUSTOMER_SERVICE.getType()
+                && packet.getMessageType() != MessageTypeEnum.ONE_2_ONE.getType()
+                && packet.getMessageType() != MessageTypeEnum.GROUP.getType())
                 || MqArchiveRouting.skipsSaveArchive(packet)) {
             return null;
         }
@@ -341,7 +343,7 @@ public final class InternalPacketIngressService {
                     packet.getMessage().getMetadata().getHttpPushClaim().getHttpPushPayloadHash());
             return claimAndExecute(committed, appKey, messageId, String.valueOf(committed.getPacketId()), true);
         } catch (RuntimeException error) {
-            log.error("HTTP 已提交客服消息恢复失败, messageId={}", messageId, error);
+            log.error("HTTP 已提交聊天消息恢复失败, messageId={}", messageId, error);
             return HttpResponseResult.success(buildResponse(messageId, null,
                     MessageSubmissionStatusEnum.UNKNOWN, "已提交消息恢复暂不可确认，请使用同一 messageId 重试"));
         }
