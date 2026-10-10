@@ -18,12 +18,13 @@ public class RocketConsumerBuilder extends AbstractRocketBuilder<DefaultMQPushCo
 
     @Override
     public DefaultMQPushConsumer build() {
-        RocketProperties.Consumer consumerConfig = rocketProperties.getConsumer();
+        RocketProperties rocket = properties();
+        RocketProperties.Consumer consumerConfig = rocket.getConsumer();
         if (consumerConfig == null) {
             throw new RuntimeException("RocketMQ 消费者配置不能为空");
         }
         DefaultMQPushConsumer consumer = new DefaultMQPushConsumer(consumerConfig.getConsumerGroup());
-        String nameServers = resolveNameServers(consumerConfig.getNameServersStr(), rocketProperties.getNameServersStr());
+        String nameServers = resolveNameServers(consumerConfig.getNameServersStr(), rocket.getNameServersStr());
         if (nameServers == null || nameServers.isEmpty()) {
             throw new RuntimeException("RocketMQ Name Server 地址不能为空");
         }

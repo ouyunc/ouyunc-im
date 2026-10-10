@@ -46,7 +46,7 @@ public class ReactiveRedisTemplateBuilder extends AbstractRedisBuilder<ReactiveR
         //1:读取配置文件,确定使用那种redis模式,并且根据配置的模式，来选出所使用的redis模式策略
         RedisStrategy redisStrategy = currentRedisStrategy();
         //这里使用lettuceConnectionFactory连接工厂
-        RedisConnectionFactory redisConnectionFactory = redisStrategy.buildRedisConnectionFactory(database,redisProperties);
+        RedisConnectionFactory redisConnectionFactory = redisStrategy.buildRedisConnectionFactory(database,properties());
         if (redisConnectionFactory instanceof LettuceConnectionFactory lettuceConnectionFactory) {
             //使用jackson序列化
             ObjectMapper objectMapper = new ObjectMapper();
@@ -81,13 +81,13 @@ public class ReactiveRedisTemplateBuilder extends AbstractRedisBuilder<ReactiveR
      * @description  获得当前redis选中的配置策略
      **/
     private RedisStrategy currentRedisStrategy() {
-        if (!redisStrategyList.isEmpty()) {
-            return redisStrategyList.parallelStream().filter(redisStrategy -> {
+        if (!strategies().isEmpty()) {
+            return strategies().parallelStream().filter(redisStrategy -> {
                 ModeEnum redisModel = redisStrategy.getModel();
-                if (mode.equals(redisModel)) {
+                if (mode().equals(redisModel)) {
                     logger.info("当前reactiveRedisTemplate加载模式为========》" + redisStrategy.getModel().getRedisModel());
                 }
-                return mode.equals(redisModel);
+                return mode().equals(redisModel);
             }).findAny().orElseThrow(() ->new RuntimeException("没有找到对应的配置方式!"));
         }
         logger.error("没有找到对应的配置方式,开始使用默认策略!");

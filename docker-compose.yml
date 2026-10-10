@@ -4,9 +4,12 @@
 #   带 Redis：docker compose --profile with-redis up -d
 #   中间件全开（开发联调）：docker compose --profile full up -d
 #
-# 注意：ouyunc-server.yml 在 jar 内 classpath；与 compose 联用时需把
-#   redis/mysql/mongo/kafka 的 host 改成服务名（redis、mysql、mongo、kafka）并重建镜像，
-#   或另做配置注入方案。
+# 配置默认在 jar 内 classpath。可用外部文件或配置中心覆盖，不必为改地址重建镜像：
+#   OUYUNC_CONFIG_FILE=/etc/ouyunc/ouyunc-server.yml
+#   OUYUNC_CONFIG_CENTER=nacos 或 zookeeper
+#   OUYUNC_NACOS_ADDR=nacos:8848
+#   OUYUNC_ZK_CONNECT=zookeeper:2181
+# 未设置时仍使用 jar 内 ouyunc-server.yml。中间件 host 要写成服务名（redis、mysql、mongo、kafka）。
 
 services:
   ouyunc-message:

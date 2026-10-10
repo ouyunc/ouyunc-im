@@ -53,47 +53,48 @@ public class KafkaTemplateBuilder extends AbstractKafkaBuilder<KafkaTemplate<?,?
      * @return java.util.Map<java.lang.String,java.lang.Object>
      **/
     private Map<String, Object> producerProperties(){
+        KafkaProperties kafka = properties();
         Map<String, Object> producerPropertiesMap = new HashMap<>(9);
         //kafka 地址,多个使用逗号隔开
-        producerPropertiesMap.put(ProducerConfig.BOOTSTRAP_SERVERS_CONFIG, kafkaProperties.getBootstrapServers());
-        if (CollectionUtils.isNotEmpty(kafkaProperties.getProducer().getBootstrapServers())) {
-            producerPropertiesMap.put(ProducerConfig.BOOTSTRAP_SERVERS_CONFIG, kafkaProperties.getProducer().getBootstrapServers());
+        producerPropertiesMap.put(ProducerConfig.BOOTSTRAP_SERVERS_CONFIG, kafka.getBootstrapServers());
+        if (CollectionUtils.isNotEmpty(kafka.getProducer().getBootstrapServers())) {
+            producerPropertiesMap.put(ProducerConfig.BOOTSTRAP_SERVERS_CONFIG, kafka.getProducer().getBootstrapServers());
         }
         //消息确认应答模式
         producerPropertiesMap.put(ProducerConfig.ACKS_CONFIG,
-                kafkaProperties.getProducer().getAck() == null
-                        ? MqConstant.KAFKA_ACKS_ALL : kafkaProperties.getProducer().getAck());
+                kafka.getProducer().getAck() == null
+                        ? MqConstant.KAFKA_ACKS_ALL : kafka.getProducer().getAck());
         //批量发送的消息数量
-        producerPropertiesMap.put(ProducerConfig.BATCH_SIZE_CONFIG, kafkaProperties.getProducer().getBatchSize());
+        producerPropertiesMap.put(ProducerConfig.BATCH_SIZE_CONFIG, kafka.getProducer().getBatchSize());
         //32M批处理缓冲区
-        producerPropertiesMap.put(ProducerConfig.BUFFER_MEMORY_CONFIG, kafkaProperties.getProducer().getBufferMemory());
+        producerPropertiesMap.put(ProducerConfig.BUFFER_MEMORY_CONFIG, kafka.getProducer().getBufferMemory());
         //发送失败后的重复发送次数
-        producerPropertiesMap.put(ProducerConfig.RETRIES_CONFIG, kafkaProperties.getProducer().getRetries());
+        producerPropertiesMap.put(ProducerConfig.RETRIES_CONFIG, kafka.getProducer().getRetries());
         //linger.ms设置(吞吐量和延时性能)producer是按照batch进行发送的，但是还要看linger.ms的值，默认是0，表示不做停留。这种情况下，可能有的batch中没有包含足够多的produce请求就被发送出去了，造成了大量的小batch，给网络IO带来的极大的压力
-        producerPropertiesMap.put(ProducerConfig.LINGER_MS_CONFIG, kafkaProperties.getProducer().getLingerMs());
+        producerPropertiesMap.put(ProducerConfig.LINGER_MS_CONFIG, kafka.getProducer().getLingerMs());
 
         //#指定消息key和消息体的编解码方式
-        producerPropertiesMap.put(ProducerConfig.KEY_SERIALIZER_CLASS_CONFIG, kafkaProperties.getProducer().getKeySerializer());
-        producerPropertiesMap.put(ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG, kafkaProperties.getProducer().getValueSerializer());
-        putIfPresent(producerPropertiesMap, ProducerConfig.CLIENT_ID_CONFIG, kafkaProperties.getProducer().getClientId());
-        putIfPresent(producerPropertiesMap, ProducerConfig.COMPRESSION_TYPE_CONFIG, kafkaProperties.getProducer().getCompressionType());
-        if (Boolean.TRUE.equals(kafkaProperties.getProducer().getEnableIdempotence())
-                || kafkaProperties.getProducer().getEnableIdempotence() == null) {
+        producerPropertiesMap.put(ProducerConfig.KEY_SERIALIZER_CLASS_CONFIG, kafka.getProducer().getKeySerializer());
+        producerPropertiesMap.put(ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG, kafka.getProducer().getValueSerializer());
+        putIfPresent(producerPropertiesMap, ProducerConfig.CLIENT_ID_CONFIG, kafka.getProducer().getClientId());
+        putIfPresent(producerPropertiesMap, ProducerConfig.COMPRESSION_TYPE_CONFIG, kafka.getProducer().getCompressionType());
+        if (Boolean.TRUE.equals(kafka.getProducer().getEnableIdempotence())
+                || kafka.getProducer().getEnableIdempotence() == null) {
             producerPropertiesMap.put(ProducerConfig.ENABLE_IDEMPOTENCE_CONFIG, true);
             producerPropertiesMap.put(ProducerConfig.MAX_IN_FLIGHT_REQUESTS_PER_CONNECTION,
-                    kafkaProperties.getProducer().getMaxInFlightRequestsPerConnection() != null
-                            ? kafkaProperties.getProducer().getMaxInFlightRequestsPerConnection() : 5);
+                    kafka.getProducer().getMaxInFlightRequestsPerConnection() != null
+                            ? kafka.getProducer().getMaxInFlightRequestsPerConnection() : 5);
         } else {
             producerPropertiesMap.put(ProducerConfig.ENABLE_IDEMPOTENCE_CONFIG, false);
             putIfPresent(producerPropertiesMap, ProducerConfig.MAX_IN_FLIGHT_REQUESTS_PER_CONNECTION,
-                    kafkaProperties.getProducer().getMaxInFlightRequestsPerConnection());
+                    kafka.getProducer().getMaxInFlightRequestsPerConnection());
         }
-        putIfPresent(producerPropertiesMap, ProducerConfig.REQUEST_TIMEOUT_MS_CONFIG, kafkaProperties.getProducer().getRequestTimeoutMs());
-        putIfPresent(producerPropertiesMap, ProducerConfig.DELIVERY_TIMEOUT_MS_CONFIG, kafkaProperties.getProducer().getDeliveryTimeoutMs());
+        putIfPresent(producerPropertiesMap, ProducerConfig.REQUEST_TIMEOUT_MS_CONFIG, kafka.getProducer().getRequestTimeoutMs());
+        putIfPresent(producerPropertiesMap, ProducerConfig.DELIVERY_TIMEOUT_MS_CONFIG, kafka.getProducer().getDeliveryTimeoutMs());
         // extra 放在 typed 字段之后：可追加 SASL 等，也可按需覆盖同名项
-        KafkaProperties.mergeClientProperties(producerPropertiesMap, kafkaProperties.getProperties());
-        if (kafkaProperties.getProducer() != null) {
-            KafkaProperties.mergeClientProperties(producerPropertiesMap, kafkaProperties.getProducer().getProperties());
+        KafkaProperties.mergeClientProperties(producerPropertiesMap, kafka.getProperties());
+        if (kafka.getProducer() != null) {
+            KafkaProperties.mergeClientProperties(producerPropertiesMap, kafka.getProducer().getProperties());
         }
         return producerPropertiesMap;
     }

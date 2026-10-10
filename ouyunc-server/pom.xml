@@ -15,6 +15,21 @@
     <dependencies>
         <dependency>
             <groupId>com.ouyunc</groupId>
+            <artifactId>ouyunc-config-core</artifactId>
+            <version>${revision}</version>
+        </dependency>
+        <dependency>
+            <groupId>com.ouyunc</groupId>
+            <artifactId>ouyunc-config-nacos</artifactId>
+            <version>${revision}</version>
+        </dependency>
+        <dependency>
+            <groupId>com.ouyunc</groupId>
+            <artifactId>ouyunc-config-zk</artifactId>
+            <version>${revision}</version>
+        </dependency>
+        <dependency>
+            <groupId>com.ouyunc</groupId>
             <artifactId>ouyunc-id</artifactId>
             <version>${revision}</version>
         </dependency>

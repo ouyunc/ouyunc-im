@@ -1,5 +1,6 @@
 package com.ouyunc.db.jdbc;
 
+import com.ouyunc.base.config.ConfigBinder;
 import com.ouyunc.base.constant.JdbcSqlDialectHolder;
 import com.ouyunc.base.constant.NumberConstant;
 import com.ouyunc.base.constant.PropertiesConfigConstant;
@@ -232,11 +233,23 @@ public enum JdbcFactory implements DbOperator {
         return dataSource;
     }
 
+    private static volatile JdbcProperties jdbcProperties;
+
+    private static volatile boolean bound;
+
+    /**
+     * 由配置入口绑定 {@code ouyunc.db.jdbc}。这里只保存配置，不创建连接池。
+     */
+    public static void bind() {
+        jdbcProperties = YmlUtil.getActiveProfileValue(PropertiesConfigConstant.GLOBAL_CONFIG_FILE_LOCATION, PropertiesConfigConstant.JDBC_CONFIG_PROPERTIES_PREFIX, JdbcProperties.class);
+        bound = true;
+    }
+
     /**
      * 创建数据源,可以做多数据源，这里先不做
      */
     private static DataSource createDataSource() {
-        JdbcProperties jdbcProperties = YmlUtil.getActiveProfileValue(PropertiesConfigConstant.GLOBAL_CONFIG_FILE_LOCATION, PropertiesConfigConstant.JDBC_CONFIG_PROPERTIES_PREFIX, JdbcProperties.class);
+        ConfigBinder.requireBound(bound);
         if (jdbcProperties == null) {
             throw new RuntimeException("未找到配置文件 ouyunc-server.yml 中的 ouyunc.db.jdbc 配置");
         }

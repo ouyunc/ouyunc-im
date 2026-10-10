@@ -6,7 +6,8 @@ package com.ouyunc.base.constant;
 public class PropertiesConfigConstant {
 
     /**
-     * 配置文件路径，从resources 目录下加载
+     * 配置文件名。classpath 上的这份是默认层；
+     * 进程启动后实际生效的是 ConfigBootstrap 合并进 ConfigRegistry 的结果。
      */
     public static final String GLOBAL_CONFIG_FILE_LOCATION = "ouyunc-server.yml";
 

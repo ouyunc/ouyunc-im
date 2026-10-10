@@ -16,6 +16,7 @@
         <sourceTestOutputDir name="target/generated-test-sources/test-annotations" />
         <outputRelativeToContentRoot value="true" />
         <module name="ouyunc-base" />
+        <module name="ouyunc-config-core" />
         <module name="ouyu-cache" />
         <module name="ouyunc-domain" />
         <module name="ouyunc-db-jdbc" />
@@ -26,6 +27,7 @@
         <module name="ouyunc-ai" />
         <module name="ouyunc-mq-core" />
         <module name="ouyunc-core" />
+        <module name="ouyunc-config-nacos" />
         <module name="ouyu-server" />
         <module name="ouyunc-mq-rocket" />
         <module name="ouyunc-db-influx" />
@@ -34,6 +36,7 @@
         <module name="ouyu-core" />
         <module name="ouyunc-mq-kafka" />
         <module name="ouyunc-repository" />
+        <module name="ouyunc-config-zk" />
       </profile>
     </annotationProcessing>
     <bytecodeTargetLevel target="21">

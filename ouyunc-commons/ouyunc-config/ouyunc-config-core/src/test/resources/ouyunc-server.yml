@@ -1,0 +1,18 @@
+ouyunc:
+  profiles:
+    active: dev
+  message:
+    port: 6002
+    name: "port-${ouyunc.message.port}"
+  proxy:
+    trusted-proxies:
+      - 0.0.0.0/0
+      - ::/0
+  config:
+    center:
+      type: nacos
+      fail-fast: false
+    nacos:
+      server-addr: 127.0.0.1:8848
+      group: OUYUNC_IM
+      data-id: ouyunc-server.yml

@@ -42,19 +42,20 @@ public class KafkaListenerContainerFactoryBuilder extends AbstractKafkaBuilder<K
      * @return org.springframework.kafka.config.KafkaListenerContainerFactory<?>
      **/
     public KafkaListenerContainerFactory<?> buildKafkaListenerContainerFactory() {
+        KafkaProperties kafka = properties();
         ConcurrentKafkaListenerContainerFactory<String, String> ckcFactory = new ConcurrentKafkaListenerContainerFactory<>();
         //配置消费者工厂
         ckcFactory.setConsumerFactory(consumerFactory());
         //是否批量消费
-        ckcFactory.setBatchListener(kafkaProperties.getListener().getBatchListener());
+        ckcFactory.setBatchListener(kafka.getListener().getBatchListener());
         //设置消费的线程数
-        ckcFactory.setConcurrency(kafkaProperties.getListener().getConcurrency());
+        ckcFactory.setConcurrency(kafka.getListener().getConcurrency());
         //如果消息队列中没有消息，等待timeout毫秒后，调用poll()方法。
         // 如果队列中有消息，立即消费消息，每次消费的消息的多少可以通过max.poll.records配置。
         //手动提交无需配置
-        ckcFactory.getContainerProperties().setPollTimeout(kafkaProperties.getListener().getPollTimeout());
+        ckcFactory.getContainerProperties().setPollTimeout(kafka.getListener().getPollTimeout());
         //设置提交偏移量的方式， MANUAL_IMMEDIATE 表示消费一条提交一次；MANUAL表示批量提交一次
-        ckcFactory.getContainerProperties().setAckMode(ContainerProperties.AckMode.valueOf(kafkaProperties.getListener().getAckMode()));
+        ckcFactory.getContainerProperties().setAckMode(ContainerProperties.AckMode.valueOf(kafka.getListener().getAckMode()));
         return ckcFactory;
     }
 
@@ -80,35 +81,36 @@ public class KafkaListenerContainerFactoryBuilder extends AbstractKafkaBuilder<K
      * @return java.util.Map<java.lang.String,java.lang.Object>
      **/
     private Map<String, Object> consumerProperties() {
+        KafkaProperties kafka = properties();
         Map<String, Object> consumerPropertiesMap = new HashMap<>(11);
         //消费的服务地址
-        consumerPropertiesMap.put(ConsumerConfig.BOOTSTRAP_SERVERS_CONFIG, kafkaProperties.getBootstrapServers());
-        if (CollectionUtils.isNotEmpty(kafkaProperties.getConsumer().getBootstrapServers())) {
-            consumerPropertiesMap.put(ConsumerConfig.BOOTSTRAP_SERVERS_CONFIG, kafkaProperties.getConsumer().getBootstrapServers());
+        consumerPropertiesMap.put(ConsumerConfig.BOOTSTRAP_SERVERS_CONFIG, kafka.getBootstrapServers());
+        if (CollectionUtils.isNotEmpty(kafka.getConsumer().getBootstrapServers())) {
+            consumerPropertiesMap.put(ConsumerConfig.BOOTSTRAP_SERVERS_CONFIG, kafka.getConsumer().getBootstrapServers());
         }
         //消费者组id
-        consumerPropertiesMap.put(ConsumerConfig.GROUP_ID_CONFIG, kafkaProperties.getConsumer().getGroupId());
+        consumerPropertiesMap.put(ConsumerConfig.GROUP_ID_CONFIG, kafka.getConsumer().getGroupId());
         //是否开启自动提交
-        consumerPropertiesMap.put(ConsumerConfig.ENABLE_AUTO_COMMIT_CONFIG, kafkaProperties.getConsumer().getEnableAutoCommit());
+        consumerPropertiesMap.put(ConsumerConfig.ENABLE_AUTO_COMMIT_CONFIG, kafka.getConsumer().getEnableAutoCommit());
         //批量消费一次最大拉取的数据量
-        consumerPropertiesMap.put(ConsumerConfig.MAX_POLL_RECORDS_CONFIG, kafkaProperties.getConsumer().getMaxPollRecords());
+        consumerPropertiesMap.put(ConsumerConfig.MAX_POLL_RECORDS_CONFIG, kafka.getConsumer().getMaxPollRecords());
         //最早未被消费的offset earliest
-        consumerPropertiesMap.put(ConsumerConfig.AUTO_OFFSET_RESET_CONFIG, kafkaProperties.getConsumer().getAutoOffsetReset());
+        consumerPropertiesMap.put(ConsumerConfig.AUTO_OFFSET_RESET_CONFIG, kafka.getConsumer().getAutoOffsetReset());
         //连接超时时间,20000
-        consumerPropertiesMap.put(ConsumerConfig.SESSION_TIMEOUT_MS_CONFIG, kafkaProperties.getConsumer().getSessionTimeoutMs());
+        consumerPropertiesMap.put(ConsumerConfig.SESSION_TIMEOUT_MS_CONFIG, kafka.getConsumer().getSessionTimeoutMs());
         //消费者最大心跳时间间隔,默认300s   300000
-        consumerPropertiesMap.put(ConsumerConfig.MAX_POLL_INTERVAL_MS_CONFIG, kafkaProperties.getConsumer().getMaxPollIntervalMs());
+        consumerPropertiesMap.put(ConsumerConfig.MAX_POLL_INTERVAL_MS_CONFIG, kafka.getConsumer().getMaxPollIntervalMs());
         //设置拉取数据的大小,15M  15728640
-        consumerPropertiesMap.put(ConsumerConfig.MAX_PARTITION_FETCH_BYTES_CONFIG, kafkaProperties.getConsumer().getMaxPartitionFetchBytes());
+        consumerPropertiesMap.put(ConsumerConfig.MAX_PARTITION_FETCH_BYTES_CONFIG, kafka.getConsumer().getMaxPartitionFetchBytes());
         //自动提交的间隔时间
-        consumerPropertiesMap.put(ConsumerConfig.AUTO_COMMIT_INTERVAL_MS_CONFIG, kafkaProperties.getConsumer().getAutoCommitIntervalMs());
+        consumerPropertiesMap.put(ConsumerConfig.AUTO_COMMIT_INTERVAL_MS_CONFIG, kafka.getConsumer().getAutoCommitIntervalMs());
         //指定消息key和消息体的编解码方式
-        consumerPropertiesMap.put(ConsumerConfig.KEY_DESERIALIZER_CLASS_CONFIG, kafkaProperties.getConsumer().getKeyDeserializer());
-        consumerPropertiesMap.put(ConsumerConfig.VALUE_DESERIALIZER_CLASS_CONFIG, kafkaProperties.getConsumer().getValueDeserializer());
+        consumerPropertiesMap.put(ConsumerConfig.KEY_DESERIALIZER_CLASS_CONFIG, kafka.getConsumer().getKeyDeserializer());
+        consumerPropertiesMap.put(ConsumerConfig.VALUE_DESERIALIZER_CLASS_CONFIG, kafka.getConsumer().getValueDeserializer());
         // extra 放在 typed 字段之后：可追加 SASL 等，也可按需覆盖同名项
-        KafkaProperties.mergeClientProperties(consumerPropertiesMap, kafkaProperties.getProperties());
-        if (kafkaProperties.getConsumer() != null) {
-            KafkaProperties.mergeClientProperties(consumerPropertiesMap, kafkaProperties.getConsumer().getProperties());
+        KafkaProperties.mergeClientProperties(consumerPropertiesMap, kafka.getProperties());
+        if (kafka.getConsumer() != null) {
+            KafkaProperties.mergeClientProperties(consumerPropertiesMap, kafka.getConsumer().getProperties());
         }
         return consumerPropertiesMap;
     }

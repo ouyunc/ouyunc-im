@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+    <parent>
+        <groupId>com.ouyunc</groupId>
+        <artifactId>ouyunc-commons</artifactId>
+        <version>${revision}</version>
+    </parent>
+    <artifactId>ouyunc-config</artifactId>
+    <name>ouyunc-config</name>
+    <description>配置加载（本地、外部文件、配置中心）</description>
+    <version>${revision}</version>
+    <packaging>pom</packaging>
+    <modules>
+        <module>ouyunc-config-core</module>
+        <module>ouyunc-config-nacos</module>
+        <module>ouyunc-config-zk</module>
+    </modules>
+</project>

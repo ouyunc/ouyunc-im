@@ -25,7 +25,7 @@ public class StringRedisTemplateBuilder extends AbstractRedisBuilder<StringRedis
         //1:读取配置文件,确定使用那种redis模式,并且根据配置的模式，来选出所使用的redis模式策略
         RedisStrategy redisStrategy = currentRedisStrategy();
         //这里使用lettuceConnectionFactory连接工厂
-        RedisConnectionFactory lettuceConnectionFactory = redisStrategy.buildRedisConnectionFactory(database, redisProperties);
+        RedisConnectionFactory lettuceConnectionFactory = redisStrategy.buildRedisConnectionFactory(database, properties());
         StringRedisTemplate stringRedisTemplate = new StringRedisTemplate();
         //设置开启事务,会跟着数据库事务一起回滚（但是在该事务中不能获取set的值）
         //stringRedisTemplate.setEnableTransactionSupport(true);
@@ -49,13 +49,13 @@ public class StringRedisTemplateBuilder extends AbstractRedisBuilder<StringRedis
      * @description  获得当前redis选中的配置策略
      **/
     private RedisStrategy currentRedisStrategy() {
-        if (!redisStrategyList.isEmpty()) {
-            return redisStrategyList.parallelStream().filter(redisStrategy -> {
+        if (!strategies().isEmpty()) {
+            return strategies().parallelStream().filter(redisStrategy -> {
                 ModeEnum redisModel = redisStrategy.getModel();
-                if (mode.equals(redisModel)) {
+                if (mode().equals(redisModel)) {
                     logger.info("当前StringRedisTemplate加载模式为========》" + redisStrategy.getModel().getRedisModel());
                 }
-                return mode.equals(redisModel);
+                return mode().equals(redisModel);
             }).findAny().orElseThrow(() ->new RuntimeException("没有找到对应的配置方式!"));
         }
         logger.error("没有找到对应的配置方式!");

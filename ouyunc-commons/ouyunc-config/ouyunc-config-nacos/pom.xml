@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+    <parent>
+        <groupId>com.ouyunc</groupId>
+        <artifactId>ouyunc-config</artifactId>
+        <version>${revision}</version>
+    </parent>
+    <artifactId>ouyunc-config-nacos</artifactId>
+    <name>ouyunc-config-nacos</name>
+    <version>${revision}</version>
+    <description>Nacos 配置源。使用 Open API v1，不引入 nacos-client，避免和 IM 的 Netty 版本冲突</description>
+
+    <dependencies>
+        <dependency>
+            <groupId>com.ouyunc</groupId>
+            <artifactId>ouyunc-config-core</artifactId>
+            <version>${revision}</version>
+        </dependency>
+    </dependencies>
+</project>

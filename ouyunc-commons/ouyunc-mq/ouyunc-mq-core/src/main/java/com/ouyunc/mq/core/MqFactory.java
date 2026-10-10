@@ -1,5 +1,6 @@
 package com.ouyunc.mq.core;
 
+import com.ouyunc.base.config.ConfigBinder;
 import com.ouyunc.base.constant.PropertiesConfigConstant;
 import com.ouyunc.base.utils.YmlUtil;
 import com.ouyunc.mq.core.api.MqPublisher;
@@ -32,10 +33,7 @@ public enum MqFactory {
         }
 
         private static MqPublisher createPublisher() {
-            MqProperties properties = YmlUtil.getActiveProfileValue(
-                    PropertiesConfigConstant.GLOBAL_CONFIG_FILE_LOCATION,
-                    PropertiesConfigConstant.MQ_CONFIG_PROPERTIES_PREFIX,
-                    MqProperties.class);
+            MqProperties properties = MqFactory.properties();
             MqType type = MqType.from(properties != null ? properties.getType() : null);
             String implementationClass = switch (type) {
                 case ROCKET -> "com.ouyunc.mq.rocket.RocketMqPublisher";
@@ -59,6 +57,26 @@ public enum MqFactory {
     };
 
     private static final Logger log = LoggerFactory.getLogger(MqFactory.class);
+
+    private static volatile MqProperties mqProperties;
+
+    private static volatile boolean bound;
+
+    /**
+     * 由配置入口绑定 {@code ouyunc.mq}。类型缺失时仍按原默认类型选择实现。
+     */
+    public static void bind() {
+        mqProperties = YmlUtil.getActiveProfileValue(
+                PropertiesConfigConstant.GLOBAL_CONFIG_FILE_LOCATION,
+                PropertiesConfigConstant.MQ_CONFIG_PROPERTIES_PREFIX,
+                MqProperties.class);
+        bound = true;
+    }
+
+    private static MqProperties properties() {
+        ConfigBinder.requireBound(bound);
+        return mqProperties;
+    }
 
     public abstract MqPublisher instance();
 }

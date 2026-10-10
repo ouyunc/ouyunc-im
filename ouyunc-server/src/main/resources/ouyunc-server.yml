@@ -2,6 +2,26 @@
 ouyunc:
   profiles:
     active: dev
+  # 引导配置。classpath 打底，外部文件覆盖，Nacos 或 ZooKeeper 再覆盖。
+  # center.type=none 时不访问配置中心。远程文档里的 ouyunc.config 会被忽略。
+  # 也可用环境变量：OUYUNC_CONFIG_FILE、OUYUNC_CONFIG_CENTER、OUYUNC_NACOS_ADDR、OUYUNC_ZK_CONNECT。
+  config:
+    # 文件或目录，可空
+    #file: C:\Users\admin\Desktop\ouyunc-server-dev.yml
+    center:
+      #nacos,zk
+      type: none
+      fail-fast: true
+    nacos:
+      server-addr: 111.228.25.172:8848
+      namespace: 46c27fab-0293-435d-8a35-cd6b217af3b6
+      group: ouyunc-im
+      data-id: ouyunc-server-dev.yaml
+      username: nacos
+      password: OyNacos#k8M2vN9pQx!26
+    zk:
+      connect-string: 172.28.102.86:2181
+      path: /configuration/test/ouyunc-server.yml
   message:
     storage:
       # Redis 消息正文热数据 TTL，单位秒；过期后 packets 查询回源 Mongo/MySQL 并按该 TTL 回填。

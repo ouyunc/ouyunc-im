@@ -1,0 +1,256 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<jmeterTestPlan version="1.2" properties="5.0" jmeter="5.5">
+  <hashTree>
+    <TestPlan guiclass="TestPlanGui" testclass="TestPlan" testname="ouyunc-im HTTP Push 容量压测" enabled="true">
+      <stringProp name="TestPlan.comments">使用标准 JMeter 组件压测 POST /api/im/message/push。业务成功必须同时满足 HTTP 200、success=true、data.status=ACCEPTED。</stringProp>
+      <boolProp name="TestPlan.functional_mode">false</boolProp>
+      <boolProp name="TestPlan.tearDown_on_shutdown">true</boolProp>
+      <boolProp name="TestPlan.serialize_threadgroups">false</boolProp>
+      <elementProp name="TestPlan.user_defined_variables" elementType="Arguments" guiclass="ArgumentsPanel" testclass="Arguments" testname="压测参数">
+        <collectionProp name="Arguments.arguments">
+          <elementProp name="protocol" elementType="Argument">
+            <stringProp name="Argument.name">protocol</stringProp>
+            <stringProp name="Argument.value">${__P(protocol,http)}</stringProp>
+          </elementProp>
+          <elementProp name="host" elementType="Argument">
+            <stringProp name="Argument.name">host</stringProp>
+            <stringProp name="Argument.value">${__P(host,127.0.0.1)}</stringProp>
+          </elementProp>
+          <elementProp name="port" elementType="Argument">
+            <stringProp name="Argument.name">port</stringProp>
+            <stringProp name="Argument.value">${__P(port,6003)}</stringProp>
+          </elementProp>
+          <elementProp name="path" elementType="Argument">
+            <stringProp name="Argument.name">path</stringProp>
+            <stringProp name="Argument.value">${__P(path,/api/im/message/push)}</stringProp>
+          </elementProp>
+          <elementProp name="app_key" elementType="Argument">
+            <stringProp name="Argument.name">app_key</stringProp>
+            <stringProp name="Argument.value">${__P(app_key,ouyunc)}</stringProp>
+          </elementProp>
+          <elementProp name="jwt" elementType="Argument">
+            <stringProp name="Argument.name">jwt</stringProp>
+            <stringProp name="Argument.value">${__P(jwt,REPLACE_ME)}</stringProp>
+          </elementProp>
+          <elementProp name="engine_id" elementType="Argument">
+            <stringProp name="Argument.name">engine_id</stringProp>
+            <stringProp name="Argument.value">${__P(engine_id,jmeter-1)}</stringProp>
+          </elementProp>
+          <elementProp name="to_prefix" elementType="Argument">
+            <stringProp name="Argument.name">to_prefix</stringProp>
+            <stringProp name="Argument.value">${__P(to_prefix,load-user-)}</stringProp>
+          </elementProp>
+          <elementProp name="fixed_to" elementType="Argument">
+            <stringProp name="Argument.name">fixed_to</stringProp>
+            <stringProp name="Argument.value">${__P(fixed_to,)}</stringProp>
+          </elementProp>
+          <elementProp name="push_type" elementType="Argument">
+            <stringProp name="Argument.name">push_type</stringProp>
+            <stringProp name="Argument.value">${__P(push_type,0)}</stringProp>
+          </elementProp>
+          <elementProp name="push_channel" elementType="Argument">
+            <stringProp name="Argument.name">push_channel</stringProp>
+            <stringProp name="Argument.value">${__P(push_channel,0)}</stringProp>
+          </elementProp>
+          <elementProp name="to_type" elementType="Argument">
+            <stringProp name="Argument.name">to_type</stringProp>
+            <stringProp name="Argument.value">${__P(to_type,1)}</stringProp>
+          </elementProp>
+          <elementProp name="content_size" elementType="Argument">
+            <stringProp name="Argument.name">content_size</stringProp>
+            <stringProp name="Argument.value">${__P(content_size,256)}</stringProp>
+          </elementProp>
+          <elementProp name="connect_timeout" elementType="Argument">
+            <stringProp name="Argument.name">connect_timeout</stringProp>
+            <stringProp name="Argument.value">${__P(connect_timeout,2000)}</stringProp>
+          </elementProp>
+          <elementProp name="response_timeout" elementType="Argument">
+            <stringProp name="Argument.name">response_timeout</stringProp>
+            <stringProp name="Argument.value">${__P(response_timeout,15000)}</stringProp>
+          </elementProp>
+        </collectionProp>
+      </elementProp>
+    </TestPlan>
+    <hashTree>
+      <SetupThreadGroup guiclass="SetupThreadGroupGui" testclass="SetupThreadGroup" testname="参数预检" enabled="true">
+        <stringProp name="ThreadGroup.on_sample_error">stoptestnow</stringProp>
+        <elementProp name="ThreadGroup.main_controller" elementType="LoopController" guiclass="LoopControlPanel" testclass="LoopController" testname="一次">
+          <boolProp name="LoopController.continue_forever">false</boolProp>
+          <stringProp name="LoopController.loops">1</stringProp>
+        </elementProp>
+        <stringProp name="ThreadGroup.num_threads">1</stringProp>
+        <stringProp name="ThreadGroup.ramp_time">1</stringProp>
+        <boolProp name="ThreadGroup.scheduler">false</boolProp>
+      </SetupThreadGroup>
+      <hashTree>
+        <JSR223Sampler guiclass="TestBeanGUI" testclass="JSR223Sampler" testname="检查必填参数" enabled="true">
+          <stringProp name="scriptLanguage">groovy</stringProp>
+          <stringProp name="parameters"></stringProp>
+          <stringProp name="filename"></stringProp>
+          <stringProp name="cacheKey">ouyunc-im-jmeter-precheck-v1</stringProp>
+          <stringProp name="script">if (!vars.get('jwt') || vars.get('jwt') == 'REPLACE_ME') {
+    SampleResult.setSuccessful(false)
+    SampleResult.setResponseCode('CONFIG_ERROR')
+    SampleResult.setResponseMessage('必须通过 -Jjwt=&lt;token&gt; 提供 HTTP Push JWT')
+    return
+}
+if (!vars.get('app_key')) {
+    SampleResult.setSuccessful(false)
+    SampleResult.setResponseCode('CONFIG_ERROR')
+    SampleResult.setResponseMessage('必须通过 -Japp_key=&lt;appKey&gt; 提供租户')
+    return
+}
+SampleResult.setResponseCode('200')
+SampleResult.setResponseMessage('参数检查通过')</stringProp>
+        </JSR223Sampler>
+        <hashTree/>
+      </hashTree>
+
+      <ThreadGroup guiclass="ThreadGroupGui" testclass="ThreadGroup" testname="HTTP Push 稳态负载" enabled="true">
+        <stringProp name="ThreadGroup.on_sample_error">continue</stringProp>
+        <elementProp name="ThreadGroup.main_controller" elementType="LoopController" guiclass="LoopControlPanel" testclass="LoopController" testname="持续循环">
+          <boolProp name="LoopController.continue_forever">true</boolProp>
+          <stringProp name="LoopController.loops">-1</stringProp>
+        </elementProp>
+        <stringProp name="ThreadGroup.num_threads">${__P(threads,100)}</stringProp>
+        <stringProp name="ThreadGroup.ramp_time">${__P(ramp_seconds,60)}</stringProp>
+        <boolProp name="ThreadGroup.scheduler">true</boolProp>
+        <stringProp name="ThreadGroup.duration">${__P(duration_seconds,300)}</stringProp>
+        <stringProp name="ThreadGroup.delay">0</stringProp>
+        <boolProp name="ThreadGroup.same_user_on_next_iteration">true</boolProp>
+      </ThreadGroup>
+      <hashTree>
+        <JSR223PreProcessor guiclass="TestBeanGUI" testclass="JSR223PreProcessor" testname="生成唯一业务参数" enabled="true">
+          <stringProp name="scriptLanguage">groovy</stringProp>
+          <stringProp name="parameters"></stringProp>
+          <stringProp name="filename"></stringProp>
+          <stringProp name="cacheKey">ouyunc-im-http-push-data-v1</stringProp>
+          <stringProp name="script">def fixedTo = vars.get('fixed_to')
+def recipient = fixedTo ? fixedTo : vars.get('to_prefix') + ctx.getThreadNum()
+def messageId = vars.get('engine_id') + '-' + UUID.randomUUID().toString()
+int size = Math.max(1, (vars.get('content_size') ?: '256') as int)
+def seed = 'ouyunc-im-load-'
+def content = seed.repeat((int) Math.ceil(size / (double) seed.length())).substring(0, size)
+vars.put('recipient', recipient)
+vars.put('message_id', messageId)
+vars.put('request_id', messageId)
+vars.put('content', content)</stringProp>
+        </JSR223PreProcessor>
+        <hashTree/>
+
+        <ConstantThroughputTimer guiclass="TestBeanGUI" testclass="ConstantThroughputTimer" testname="全局目标 TPS" enabled="true">
+          <stringProp name="throughput">${__groovy((props.get('target_tps') ?: '100').toDouble() * 60.0)}</stringProp>
+          <intProp name="calcMode">2</intProp>
+        </ConstantThroughputTimer>
+        <hashTree/>
+
+        <HeaderManager guiclass="HeaderPanel" testclass="HeaderManager" testname="HTTP Headers" enabled="true">
+          <collectionProp name="HeaderManager.headers">
+            <elementProp name="Content-Type" elementType="Header">
+              <stringProp name="Header.name">Content-Type</stringProp>
+              <stringProp name="Header.value">application/json</stringProp>
+            </elementProp>
+            <elementProp name="Accept" elementType="Header">
+              <stringProp name="Header.name">Accept</stringProp>
+              <stringProp name="Header.value">application/json</stringProp>
+            </elementProp>
+            <elementProp name="X-App-Key" elementType="Header">
+              <stringProp name="Header.name">X-App-Key</stringProp>
+              <stringProp name="Header.value">${app_key}</stringProp>
+            </elementProp>
+            <elementProp name="X-Request-Id" elementType="Header">
+              <stringProp name="Header.name">X-Request-Id</stringProp>
+              <stringProp name="Header.value">${request_id}</stringProp>
+            </elementProp>
+            <elementProp name="Authorization" elementType="Header">
+              <stringProp name="Header.name">Authorization</stringProp>
+              <stringProp name="Header.value">Bearer ${jwt}</stringProp>
+            </elementProp>
+          </collectionProp>
+        </HeaderManager>
+        <hashTree/>
+
+        <HTTPSamplerProxy guiclass="HttpTestSampleGui" testclass="HTTPSamplerProxy" testname="POST /api/im/message/push" enabled="true">
+          <elementProp name="HTTPsampler.Arguments" elementType="Arguments">
+            <collectionProp name="Arguments.arguments">
+              <elementProp name="" elementType="HTTPArgument">
+                <boolProp name="HTTPArgument.always_encode">false</boolProp>
+                <stringProp name="Argument.value">{
+  &quot;pushType&quot;: ${push_type},
+  &quot;pushChannel&quot;: ${push_channel},
+  &quot;messageId&quot;: &quot;${message_id}&quot;,
+  &quot;to&quot;: &quot;${recipient}&quot;,
+  &quot;toType&quot;: ${to_type},
+  &quot;contentType&quot;: -128,
+  &quot;content&quot;: &quot;${content}&quot;,
+  &quot;deviceType&quot;: 11,
+  &quot;createTime&quot;: ${__time()}
+}</stringProp>
+                <stringProp name="Argument.metadata">=</stringProp>
+              </elementProp>
+            </collectionProp>
+          </elementProp>
+          <stringProp name="HTTPSampler.domain">${host}</stringProp>
+          <stringProp name="HTTPSampler.port">${port}</stringProp>
+          <stringProp name="HTTPSampler.protocol">${protocol}</stringProp>
+          <stringProp name="HTTPSampler.contentEncoding">UTF-8</stringProp>
+          <stringProp name="HTTPSampler.path">${path}</stringProp>
+          <stringProp name="HTTPSampler.method">POST</stringProp>
+          <boolProp name="HTTPSampler.follow_redirects">false</boolProp>
+          <boolProp name="HTTPSampler.auto_redirects">false</boolProp>
+          <boolProp name="HTTPSampler.use_keepalive">true</boolProp>
+          <boolProp name="HTTPSampler.DO_MULTIPART_POST">false</boolProp>
+          <stringProp name="HTTPSampler.embedded_url_re"></stringProp>
+          <stringProp name="HTTPSampler.connect_timeout">${connect_timeout}</stringProp>
+          <stringProp name="HTTPSampler.response_timeout">${response_timeout}</stringProp>
+          <stringProp name="HTTPSampler.implementation">HttpClient4</stringProp>
+        </HTTPSamplerProxy>
+        <hashTree>
+          <ResponseAssertion guiclass="AssertionGui" testclass="ResponseAssertion" testname="HTTP 状态必须为 200" enabled="true">
+            <collectionProp name="Asserion.test_strings">
+              <stringProp name="49586">200</stringProp>
+            </collectionProp>
+            <stringProp name="Assertion.custom_message">HTTP Push 未返回 200</stringProp>
+            <stringProp name="Assertion.test_field">Assertion.response_code</stringProp>
+            <boolProp name="Assertion.assume_success">false</boolProp>
+            <intProp name="Assertion.test_type">8</intProp>
+          </ResponseAssertion>
+          <hashTree/>
+          <JSR223Assertion guiclass="TestBeanGUI" testclass="JSR223Assertion" testname="业务状态必须 ACCEPTED" enabled="true">
+            <stringProp name="scriptLanguage">groovy</stringProp>
+            <stringProp name="parameters"></stringProp>
+            <stringProp name="filename"></stringProp>
+            <stringProp name="cacheKey">ouyunc-im-http-push-assert-v1</stringProp>
+            <stringProp name="script">import groovy.json.JsonSlurper
+
+if (prev.getResponseCode() != '200') {
+    return
+}
+try {
+    def json = new JsonSlurper().parseText(prev.getResponseDataAsString())
+    if (json.success != true) {
+        AssertionResult.setFailure(true)
+        AssertionResult.setFailureMessage('HTTP 业务 success=false: ' + prev.getResponseDataAsString())
+        return
+    }
+    if (json.data?.status != 'ACCEPTED') {
+        AssertionResult.setFailure(true)
+        AssertionResult.setFailureMessage('消息未受理，status=' + json.data?.status + ', response=' + prev.getResponseDataAsString())
+    }
+} catch (Exception ex) {
+    AssertionResult.setError(true)
+    AssertionResult.setFailureMessage('响应 JSON 无法解析: ' + ex.getMessage())
+}</stringProp>
+          </JSR223Assertion>
+          <hashTree/>
+        </hashTree>
+
+        <UniformRandomTimer guiclass="UniformRandomTimerGui" testclass="UniformRandomTimer" testname="轻微随机抖动" enabled="false">
+          <stringProp name="ConstantTimer.delay">0</stringProp>
+          <stringProp name="RandomTimer.range">50</stringProp>
+        </UniformRandomTimer>
+        <hashTree/>
+      </hashTree>
+    </hashTree>
+  </hashTree>
+</jmeterTestPlan>

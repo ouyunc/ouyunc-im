@@ -3,6 +3,8 @@ package com.ouyunc.base.utils;
 import com.alibaba.fastjson2.JSON;
 import com.alibaba.fastjson2.JSONReader;
 import com.alibaba.ttl.TransmittableThreadLocal;
+import com.ouyunc.base.config.ConfigFiles;
+import com.ouyunc.base.config.ConfigRegistry;
 import org.apache.commons.collections4.MapUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.slf4j.Logger;
@@ -116,6 +118,9 @@ public class YmlUtil {
      * @return Object
      */
     public static Object getValue(String key, String ...fileNames){
+        if (ConfigRegistry.isInstalled() && ConfigFiles.allServerConfigFiles(fileNames)) {
+            return ConfigRegistry.find(key);
+        }
         Object value = null;
         if (fileNames == null || fileNames.length == 0) {
             fileNames = new String[]{"bootstrap.yaml", "bootstrap.yml", "application.yaml", "application.yml"};
@@ -167,6 +172,11 @@ public class YmlUtil {
         if (StringUtils.isBlank(fileName) || !(fileName.endsWith(".yml") || fileName.endsWith(".yaml"))) {
             throw new RuntimeException("文件名不为空且必须以 .yml 或 .yaml 结尾");
         }
+        if (ConfigRegistry.isInstalled() && ConfigFiles.isServerConfigFile(fileName)) {
+            Object value = ConfigRegistry.find(key);
+            log.debug("读取已合并配置, profile={}, key={}", ConfigRegistry.activeProfile(), key);
+            return JSON.parseObject(JSON.toJSONString(value), tClass, JSONReader.Feature.SupportClassForName);
+        }
         String activeProfile = getActiveProfiles();
         String activeProfileFileName = buildProfileFileName(fileName, activeProfile);
         logProfileResolutionOnce(activeProfile, fileName, activeProfileFileName);
@@ -186,6 +196,12 @@ public class YmlUtil {
      */
     public static String getActiveProfiles(){
         if (profileLocal.get() == null) {
+            String installedProfile = StringUtils.trimToNull(ConfigRegistry.activeProfile());
+            if (installedProfile != null) {
+                setProfile(installedProfile);
+                profileSourceLocal.set("config_registry");
+                return installedProfile;
+            }
             String value = StringUtils.trimToNull(System.getProperty(OUYUNC_ENV_SYSTEM_PROPERTY));
             String source = "jvm_property:" + OUYUNC_ENV_SYSTEM_PROPERTY;
             if (StringUtils.isBlank(value)) {
@@ -234,6 +250,16 @@ public class YmlUtil {
             return;
         }
         log.info("配置加载环境: {}, 来源: {}, 仅使用基础文件: {}", activeProfile, profileSource, baseFileName);
+    }
+
+    /**
+     * 清空当前线程记下的环境名。测试里连续安装配置时使用，避免上一次的 profile 粘住。
+     */
+    public static void clearThreadCache() {
+        profileLocal.remove();
+        profileSourceLocal.remove();
+        profileLogged.remove();
+        nowFileName.remove();
     }
 
 }

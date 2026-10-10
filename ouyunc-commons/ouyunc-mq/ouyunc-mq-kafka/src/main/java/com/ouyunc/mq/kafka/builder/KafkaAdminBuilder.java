@@ -23,10 +23,11 @@ public class KafkaAdminBuilder extends AbstractKafkaBuilder<KafkaAdmin>{
      */
     @Override
     public KafkaAdmin build() {
+        KafkaProperties kafka = properties();
         Map<String, Object> props = new HashMap<>(4);
         //配置Kafka实例的连接地址
-        props.put(AdminClientConfig.BOOTSTRAP_SERVERS_CONFIG, kafkaProperties.getBootstrapServers());
-        KafkaProperties.mergeClientProperties(props, kafkaProperties.getProperties());
+        props.put(AdminClientConfig.BOOTSTRAP_SERVERS_CONFIG, kafka.getBootstrapServers());
+        KafkaProperties.mergeClientProperties(props, kafka.getProperties());
         return new KafkaAdmin(props);
     }
 }

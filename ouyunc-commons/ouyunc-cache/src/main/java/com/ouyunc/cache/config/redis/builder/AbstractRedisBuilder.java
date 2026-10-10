@@ -1,5 +1,6 @@
 package com.ouyunc.cache.config.redis.builder;
 
+import com.ouyunc.base.config.ConfigBinder;
 import com.ouyunc.base.constant.PropertiesConfigConstant;
 import com.ouyunc.base.utils.YmlUtil;
 import com.ouyunc.cache.config.constant.ModeEnum;
@@ -19,39 +20,66 @@ import java.util.List;
 public abstract class AbstractRedisBuilder<T> implements RedisBuilder<T>{
 
     /**
-     * 配置文件信息
+     * 配置文件信息。由入口 {@link #bind()} 写入，子类通过 {@link #properties()} 读取。
      **/
-    protected static RedisProperties redisProperties;
+    private static volatile RedisProperties redisProperties;
     /**
      * 获取当前选中的redis使用模式类型，如果没有设置primary则默认为单例模式类型
      **/
-    protected static ModeEnum mode;
+    private static volatile ModeEnum mode;
 
     /**
      * 获取所有redisson的模式策略
      **/
-    protected static List<RedisStrategy> redisStrategyList;
+    private static volatile List<RedisStrategy> redisStrategyList;
 
-    static {
-        // 注意：如果想使用其他的配置文件名称，可以全局搜索 ouyunc-server.yml， 然后替换自己的文件名
-        redisProperties = YmlUtil.getActiveProfileValue(PropertiesConfigConstant.GLOBAL_CONFIG_FILE_LOCATION, PropertiesConfigConstant.CACHE_CONFIG_PROPERTIES_PREFIX, RedisProperties.class);
-        if (redisProperties != null) {
-            initModeAndStrategy();
+    private static volatile boolean bound;
+
+    /**
+     * 由配置入口绑定 {@code ouyunc.cache.redis}。前缀缺失时记下空值，建连时再失败。
+     */
+    public static void bind() {
+        synchronized (AbstractRedisBuilder.class) {
+            redisProperties = YmlUtil.getActiveProfileValue(PropertiesConfigConstant.GLOBAL_CONFIG_FILE_LOCATION, PropertiesConfigConstant.CACHE_CONFIG_PROPERTIES_PREFIX, RedisProperties.class);
+            if (redisProperties != null) {
+                initModeAndStrategy();
+            } else {
+                mode = null;
+                redisStrategyList = null;
+            }
+            bound = true;
         }
-
     }
 
     /**
      * YAML {@code ouyunc.cache.redis} 绑定结果，供 {@link com.ouyunc.cache.config.CacheFactory} 无参 instance() 读取默认 database。
-     * 类加载时已从配置文件初始化，可能为 null（无配置文件时）。
+     * 入口已执行且未配置该前缀时返回 null。
      */
     public static RedisProperties getRedisProperties() {
+        return properties();
+    }
+
+    protected static RedisProperties properties() {
+        ConfigBinder.requireBound(bound);
         return redisProperties;
     }
 
+    protected static ModeEnum mode() {
+        ConfigBinder.requireBound(bound);
+        return mode;
+    }
+
+    protected static List<RedisStrategy> strategies() {
+        ConfigBinder.requireBound(bound);
+        return redisStrategyList == null ? List.of() : redisStrategyList;
+    }
+
     public void setRedisProperties(RedisProperties redisProperties) {
-        AbstractRedisBuilder.redisProperties = redisProperties;
-        initModeAndStrategy();
+        synchronized (AbstractRedisBuilder.class) {
+            AbstractRedisBuilder.redisProperties = redisProperties;
+            initModeAndStrategy();
+            bound = true;
+        }
     }
 
     /**

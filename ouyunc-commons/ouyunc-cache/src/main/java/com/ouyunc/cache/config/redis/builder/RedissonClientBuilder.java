@@ -24,7 +24,7 @@ public class RedissonClientBuilder extends AbstractRedisBuilder<RedissonClient> 
     @Override
     public RedissonClient build(int database) {
         RedisStrategy redissonStrategy = currentRedissonStrategy();
-        Config config = redissonStrategy.buildRedissonConfig(database, redisProperties);
+        Config config = redissonStrategy.buildRedissonConfig(database, properties());
         return Redisson.create(config);
     }
 
@@ -34,13 +34,13 @@ public class RedissonClientBuilder extends AbstractRedisBuilder<RedissonClient> 
      * @description  配置当前redisson的策略
      **/
     private RedisStrategy currentRedissonStrategy() {
-        if (!redisStrategyList.isEmpty()) {
-            return redisStrategyList.parallelStream().filter(redissonStrategy -> {
+        if (!strategies().isEmpty()) {
+            return strategies().parallelStream().filter(redissonStrategy -> {
                 ModeEnum redisModel = redissonStrategy.getModel();
-                if (mode.equals(redisModel)) {
+                if (mode().equals(redisModel)) {
                     log.info("当前redisClient加载模式为========》" + redissonStrategy.getModel().getRedisModel());
                 }
-                return mode.equals(redisModel);
+                return mode().equals(redisModel);
             }).findAny().orElseThrow(() ->new RuntimeException("没有找到对应的配置方式"));
         }
         throw new RuntimeException(  "没有找到对应的配置方式");

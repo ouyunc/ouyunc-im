@@ -14,6 +14,7 @@
     <packaging>pom</packaging>
     <modules>
         <module>ouyunc-base</module>
+        <module>ouyunc-config</module>
         <module>ouyunc-core</module>
         <module>ouyunc-repository</module>
         <module>ouyunc-cache</module>

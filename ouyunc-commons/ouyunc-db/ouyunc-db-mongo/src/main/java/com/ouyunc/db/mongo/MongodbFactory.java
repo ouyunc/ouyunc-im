@@ -3,6 +3,7 @@ package com.ouyunc.db.mongo;
 import com.mongodb.*;
 import com.mongodb.client.MongoClient;
 import com.mongodb.client.MongoClients;
+import com.ouyunc.base.config.ConfigBinder;
 import com.ouyunc.base.constant.NumberConstant;
 import com.ouyunc.base.constant.PropertiesConfigConstant;
 import com.ouyunc.base.utils.YmlUtil;
@@ -34,36 +35,31 @@ public enum MongodbFactory {
         // 默认mongo库名,加载配置文件的时候会有一个默认值来进行初始化，如果不传数据库名称，则使用默认的数据库来操作
         private static String DEFAULT_DATABASE_NAME = "ouyunc";
 
-        // mongodb 属性配置文件
-        private static final MongodbProperties mongodbProperties;
-
         // mongodb 库名-操作模板 map
         private static final ConcurrentHashMap<String, MongoTemplate> mongoTemplateMap = new ConcurrentHashMap<>();
+
+        @Override
+        void useDefaultDatabase(String databaseName) {
+            if (StringUtils.isNotBlank(databaseName)) {
+                DEFAULT_DATABASE_NAME = databaseName;
+            }
+        }
 
         /**
          * 使用默认的mongodb 数据库名进行操作
          */
         @Override
         public MongoTemplate instance() {
+            MongodbFactory.requireReady();
             return instance(DEFAULT_DATABASE_NAME);
         }
 
-        static {
-            // 判断配置文件中的默认数据库名称是否为空，如果不为空则使用配置文件中的默认数据库名称
-            mongodbProperties = YmlUtil.getActiveProfileValue(PropertiesConfigConstant.GLOBAL_CONFIG_FILE_LOCATION, PropertiesConfigConstant.MONGODB_CONFIG_PROPERTIES_PREFIX, MongodbProperties.class);
-            if (mongodbProperties != null) {
-                if (StringUtils.isNotBlank(mongodbProperties.getDefaultDatabase())) {
-                    DEFAULT_DATABASE_NAME = mongodbProperties.getDefaultDatabase();
-                }
-            }else {
-                throw new RuntimeException("获取mongodb配置文件失败");
-            }
-        }
         /**
          * 使用指定的数据库名称来进行操作数据
          */
         @Override
         public MongoTemplate instance(String databaseName) {
+            MongodbFactory.requireReady();
             // 进行配置mongoTemplate 的初始化
             MongoTemplate mongoTemplate = mongoTemplateMap.get(databaseName);
             if (mongoTemplate == null) {
@@ -174,36 +170,31 @@ public enum MongodbFactory {
         // 默认mongo库名,加载配置文件的时候会有一个默认值来进行初始化，如果不传数据库名称，则使用默认的数据库来操作
         private static String DEFAULT_DATABASE_NAME = "ouyunc";
 
-        // mongodb 属性配置文件
-        private static final MongodbProperties mongodbProperties;
-
         // mongodb 库名-操作模板 map
         private static final ConcurrentHashMap<String, ReactiveMongoTemplate> mongoTemplateMap = new ConcurrentHashMap<>();
+
+        @Override
+        void useDefaultDatabase(String databaseName) {
+            if (StringUtils.isNotBlank(databaseName)) {
+                DEFAULT_DATABASE_NAME = databaseName;
+            }
+        }
 
         /**
          * 使用默认的mongodb 数据库名进行操作
          */
         @Override
         public ReactiveMongoTemplate instance() {
+            MongodbFactory.requireReady();
             return instance(DEFAULT_DATABASE_NAME);
         }
 
-        static {
-            // 判断配置文件中的默认数据库名称是否为空，如果不为空则使用配置文件中的默认数据库名称
-            mongodbProperties = YmlUtil.getActiveProfileValue(PropertiesConfigConstant.GLOBAL_CONFIG_FILE_LOCATION, PropertiesConfigConstant.MONGODB_CONFIG_PROPERTIES_PREFIX, MongodbProperties.class);
-            if (mongodbProperties != null) {
-                if (StringUtils.isNotBlank(mongodbProperties.getDefaultDatabase())) {
-                    DEFAULT_DATABASE_NAME = mongodbProperties.getDefaultDatabase();
-                }
-            }else {
-                throw new RuntimeException("获取mongodb配置文件失败");
-            }
-        }
         /**
          * 使用指定的数据库名称来进行操作数据
          */
         @Override
         public ReactiveMongoTemplate instance(String databaseName) {
+            MongodbFactory.requireReady();
             // 进行配置mongoTemplate 的初始化
             ReactiveMongoTemplate reactiveMongoTemplate = mongoTemplateMap.get(databaseName);
             if (reactiveMongoTemplate == null) {
@@ -325,6 +316,31 @@ public enum MongodbFactory {
     }
 
     private static final Logger log = LoggerFactory.getLogger(MongodbFactory.class);
+
+    private static volatile MongodbProperties mongodbProperties;
+
+    private static volatile boolean bound;
+
+    /**
+     * 由配置入口绑定 {@code ouyunc.db.mongo}。前缀缺失时记下空值，真正取连接时再失败。
+     */
+    public static void bind() {
+        mongodbProperties = YmlUtil.getActiveProfileValue(PropertiesConfigConstant.GLOBAL_CONFIG_FILE_LOCATION, PropertiesConfigConstant.MONGODB_CONFIG_PROPERTIES_PREFIX, MongodbProperties.class);
+        bound = true;
+        String database = mongodbProperties == null ? null : mongodbProperties.getDefaultDatabase();
+        for (MongodbFactory factory : values()) {
+            factory.useDefaultDatabase(database);
+        }
+    }
+
+    private static void requireReady() {
+        ConfigBinder.requireBound(bound);
+        if (mongodbProperties == null) {
+            throw new RuntimeException("获取mongodb配置文件失败");
+        }
+    }
+
+    abstract void useDefaultDatabase(String databaseName);
 
     public abstract<T> T instance();
 

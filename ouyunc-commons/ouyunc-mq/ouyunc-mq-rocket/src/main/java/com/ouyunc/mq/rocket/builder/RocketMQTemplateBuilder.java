@@ -1,5 +1,6 @@
 package com.ouyunc.mq.rocket.builder;
 
+import com.ouyunc.mq.rocket.properties.RocketProperties;
 import org.apache.rocketmq.client.producer.DefaultMQProducer;
 import org.apache.rocketmq.spring.core.RocketMQTemplate;
 import org.springframework.beans.factory.InitializingBean;
@@ -34,8 +35,9 @@ public class RocketMQTemplateBuilder extends AbstractRocketBuilder<RocketMQTempl
         DefaultMQProducer producer = producerBuilder.build();
         RocketMQTemplate template = new RocketMQTemplate();
         template.setProducer(producer);
-        if (rocketProperties != null && rocketProperties.getCharset() != null && !rocketProperties.getCharset().isEmpty()) {
-            template.setCharset(rocketProperties.getCharset());
+        RocketProperties rocket = properties();
+        if (rocket != null && rocket.getCharset() != null && !rocket.getCharset().isEmpty()) {
+            template.setCharset(rocket.getCharset());
         }
         try {
             template.afterPropertiesSet();

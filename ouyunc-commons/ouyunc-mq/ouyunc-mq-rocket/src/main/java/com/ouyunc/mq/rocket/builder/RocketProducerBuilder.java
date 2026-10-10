@@ -17,12 +17,13 @@ public class RocketProducerBuilder extends AbstractRocketBuilder<DefaultMQProduc
 
     @Override
     public DefaultMQProducer build() {
-        RocketProperties.Producer producerConfig = rocketProperties.getProducer();
+        RocketProperties rocket = properties();
+        RocketProperties.Producer producerConfig = rocket.getProducer();
         if (producerConfig == null) {
             throw new RuntimeException("RocketMQ 生产者配置不能为空");
         }
         DefaultMQProducer producer = new DefaultMQProducer(producerConfig.getProducerGroup());
-        String nameServers = resolveNameServers(producerConfig.getNameServersStr(), rocketProperties.getNameServersStr());
+        String nameServers = resolveNameServers(producerConfig.getNameServersStr(), rocket.getNameServersStr());
         if (nameServers == null || nameServers.isEmpty()) {
             throw new RuntimeException("RocketMQ Name Server 地址不能为空");
         }

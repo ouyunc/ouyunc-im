@@ -1,5 +1,7 @@
 package com.ouyunc.core.engine;
 
+import com.ouyunc.base.config.ConfigFiles;
+import com.ouyunc.base.config.ConfigRegistry;
 import com.ouyunc.base.utils.ReflectUtil;
 import com.ouyunc.base.utils.YmlUtil;
 import com.ouyunc.core.properties.annotation.Key;
@@ -57,9 +59,19 @@ public class LoadPropertiesEngine{
 
     /**
      * 组装基础配置 + 环境覆盖配置：
-     * 例如 ouyunc-server.yml + ouyunc-server-dev.yml
+     * 例如 ouyunc-server.yml + ouyunc-server-dev.yml。
+     * ConfigBootstrap 已经按这个顺序合并过时，直接用那一份，避免环境文件再盖掉配置中心。
      */
     private Map<String, Object> buildMergedYml(String source) {
+        if (ConfigRegistry.isInstalled() && ConfigFiles.isServerConfigFile(source)) {
+            Object installed = ConfigRegistry.find(null);
+            if (installed instanceof Map<?, ?> map) {
+                @SuppressWarnings("unchecked")
+                Map<String, Object> copied = (Map<String, Object>) map;
+                return copied;
+            }
+            return new LinkedHashMap<>();
+        }
         Map<String, Object> merged = new LinkedHashMap<>();
         Object baseMap = YmlUtil.getValue(null, source);
         if (baseMap instanceof Map map) {

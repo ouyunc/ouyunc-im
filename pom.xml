@@ -90,6 +90,9 @@
     <jjwt.version>0.12.6</jjwt.version>
     <okhttp.version>4.12.0</okhttp.version>
     <junit.version>5.11.4</junit.version>
+    <!-- 配置中心：仅 ouyunc-config-zk 使用，Nacos 走 Open API，不引入 nacos-client，避免和 Netty 4.2 冲突 -->
+    <curator.version>5.7.1</curator.version>
+    <zookeeper.version>3.9.3</zookeeper.version>
   </properties>
 
   <!--依赖-->
@@ -499,6 +502,16 @@
         <groupId>com.squareup.okhttp3</groupId>
         <artifactId>okhttp</artifactId>
         <version>${okhttp.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>org.apache.curator</groupId>
+        <artifactId>curator-framework</artifactId>
+        <version>${curator.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>org.apache.zookeeper</groupId>
+        <artifactId>zookeeper</artifactId>
+        <version>${zookeeper.version}</version>
       </dependency>
     </dependencies>
 

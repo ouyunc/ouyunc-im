@@ -2,6 +2,7 @@ package com.ouyunc.db.influx;
 
 import com.influxdb.client.InfluxDBClient;
 import com.influxdb.client.InfluxDBClientFactory;
+import com.ouyunc.base.config.ConfigBinder;
 import com.ouyunc.base.constant.NumberConstant;
 import com.ouyunc.base.constant.PropertiesConfigConstant;
 import com.ouyunc.base.utils.YmlUtil;
@@ -16,23 +17,21 @@ import org.slf4j.LoggerFactory;
 public enum InfluxdbFactory {
 
     INFLUXDB_TEMPLATE(NumberConstant.NUMBER_2, "influxdb2 的操作模板"){
-        /**
-         * influxdb 客户端
-         */
-        private static final InfluxDBClient influxDBClient;
+        private static InfluxDBClient influxDBClient;
 
-        static {
-            // 加载influxdb 属性配置文件
-            InfluxdbProperties influxdbProperties = YmlUtil.getActiveProfileValue(PropertiesConfigConstant.GLOBAL_CONFIG_FILE_LOCATION, PropertiesConfigConstant.INFLUX_CONFIG_PROPERTIES_PREFIX, InfluxdbProperties.class);
-            if (influxdbProperties == null) {
-                log.error("获取influxdb配置文件失败");
-                throw new RuntimeException("获取influxdb配置文件失败");
-            }
-            influxDBClient = InfluxDBClientFactory.create(influxdbProperties.getUrl(),influxdbProperties.getToken().toCharArray(),influxdbProperties.getOrg());
-        }
         @Override
         public InfluxDBClient instance() {
-            return influxDBClient;
+            if (influxDBClient != null) {
+                return influxDBClient;
+            }
+            synchronized (this) {
+                if (influxDBClient != null) {
+                    return influxDBClient;
+                }
+                InfluxdbProperties influxdbProperties = InfluxdbFactory.properties();
+                influxDBClient = InfluxDBClientFactory.create(influxdbProperties.getUrl(), influxdbProperties.getToken().toCharArray(), influxdbProperties.getOrg());
+                return influxDBClient;
+            }
         }
 
     }
@@ -57,6 +56,27 @@ public enum InfluxdbFactory {
     }
 
     private static final Logger log = LoggerFactory.getLogger(InfluxdbFactory.class);
+
+    private static volatile InfluxdbProperties influxdbProperties;
+
+    private static volatile boolean bound;
+
+    /**
+     * 由配置入口绑定 {@code ouyunc.db.influx}。这里只保存配置，不创建客户端。
+     */
+    public static void bind() {
+        influxdbProperties = YmlUtil.getActiveProfileValue(PropertiesConfigConstant.GLOBAL_CONFIG_FILE_LOCATION, PropertiesConfigConstant.INFLUX_CONFIG_PROPERTIES_PREFIX, InfluxdbProperties.class);
+        bound = true;
+    }
+
+    private static InfluxdbProperties properties() {
+        ConfigBinder.requireBound(bound);
+        if (influxdbProperties == null) {
+            log.error("获取influxdb配置文件失败");
+            throw new RuntimeException("获取influxdb配置文件失败");
+        }
+        return influxdbProperties;
+    }
 
     public abstract InfluxDBClient instance();
 

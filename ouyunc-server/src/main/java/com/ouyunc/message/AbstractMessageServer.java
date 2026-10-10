@@ -111,8 +111,8 @@ public abstract class AbstractMessageServer implements MessageServer {
 
     /**
      * @Author fzx
-     * @Description IM服务配置类，现在直接读取本地配置文件；
-     * 后续整合到spring 项目中，直接集成AbstractMessageServer 然后重写该方法的实现，从spring容器或者配置中心获取属性值即可
+     * @Description 读取已经由 ConfigBootstrap 合并好的配置。
+     * 合并顺序：classpath、外部环境文件、Nacos 或 ZooKeeper。启动参数和 JVM 参数仍覆盖本方法装上的字段。
      */
     abstract void loadProperties(String... args);
 

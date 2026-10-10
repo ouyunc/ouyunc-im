@@ -10,9 +10,9 @@ import java.lang.annotation.*;
 public @interface LoadProperties {
 
     /***
-     * 资源文件路径（classpath）。会先加载基础文件，再按环境叠加同名前缀的环境文件：
-     * 例如 sources=ouyunc-server.yml 时，会尝试加载 ouyunc-server-{env}.yml 覆盖基础配置。
-     * 环境变量优先级：-Douyunc.env > OUYUNC_ENV > dev
+     * 资源文件名。进程启动后 {@code ConfigBootstrap} 会把 classpath、外部文件和配置中心
+     * 合成一份文档；这里仍然写 ouyunc-server.yml，读取时命中的是合并结果。
+     * 环境优先级：-Douyunc.env &gt; OUYUNC_ENV &gt; ouyunc.profiles.active &gt; dev
      */
     String sources();
 }
