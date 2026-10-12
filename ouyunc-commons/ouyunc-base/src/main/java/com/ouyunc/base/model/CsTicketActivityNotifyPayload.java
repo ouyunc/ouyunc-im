@@ -20,7 +20,7 @@ public class CsTicketActivityNotifyPayload implements Serializable {
     private Long serverTimeMs;
 
     /**
-     * 当前接待坐席类型：1人工 2机器人 3虚拟（与路由 Hash agentType 对齐）。
+     * 当前接待坐席类型：1人工 2机器人（与路由 Hash agentType 对齐）。
      * <p>历史消息可能为空。</p>
      */
     private Integer agentType;

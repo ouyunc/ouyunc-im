@@ -12,15 +12,11 @@ public final class CsAgentType {
     /** 机器人坐席：服务端接待，不走坐席长连 */
     public static final int ROBOT = 2;
 
-    /** 虚拟客服：预留；默认按非长连处理 */
-    public static final int VIRTUAL = 3;
-
     private CsAgentType() {
     }
 
     public static boolean isKnown(Integer agentType) {
-        return agentType != null
-                && (agentType == HUMAN || agentType == ROBOT || agentType == VIRTUAL);
+        return agentType != null && (agentType == HUMAN || agentType == ROBOT);
     }
 
     /**
