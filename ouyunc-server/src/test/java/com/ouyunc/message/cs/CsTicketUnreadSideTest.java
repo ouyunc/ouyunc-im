@@ -1,6 +1,5 @@
 package com.ouyunc.message.cs;
 
-import com.ouyunc.base.constant.CacheConstant;
 import com.ouyunc.base.constant.enums.MessageFromToTypeEnum;
 import com.ouyunc.base.packet.message.Message;
 import com.ouyunc.repository.cs.CsAgentType;
@@ -14,29 +13,29 @@ import static org.junit.jupiter.api.Assertions.assertNull;
 class CsTicketUnreadSideTest {
 
     @Test
-    void visitorMessageCountsOnStaffWatermark() {
+    void visitorMessageCountsOnEntryInbox() {
         CsImSessionRoute route = route();
         Message message = message("visitor-1", MessageFromToTypeEnum.CS_VISITOR.getType());
-        assertEquals(CacheConstant.CS_TICKET_UNREAD_STAFF, CsMessageScopeHelper.incomingUnreadSide(message, route));
-        assertEquals(CacheConstant.CS_TICKET_UNREAD_VISITOR, CsMessageScopeHelper.authorReadSide(message, route));
+        assertEquals("entry", CsMessageScopeHelper.incomingUnreadOwner(message, route));
+        assertEquals("visitor-1", CsMessageScopeHelper.authorReadOwner(message, route));
     }
 
     @Test
-    void anyAgentOrRobotSharesStaffWatermark() {
+    void anyAgentOrRobotSharesEntryWatermark() {
         CsImSessionRoute route = route();
         Message agent = message("agent-b", MessageFromToTypeEnum.CS_AGENT.getType());
         Message robot = message("robot-1", MessageFromToTypeEnum.BOT.getType());
-        assertEquals(CacheConstant.CS_TICKET_UNREAD_VISITOR, CsMessageScopeHelper.incomingUnreadSide(agent, route));
-        assertEquals(CacheConstant.CS_TICKET_UNREAD_STAFF, CsMessageScopeHelper.authorReadSide(agent, route));
-        assertEquals(CacheConstant.CS_TICKET_UNREAD_STAFF, CsMessageScopeHelper.authorReadSide(robot, route));
+        assertEquals("visitor-1", CsMessageScopeHelper.incomingUnreadOwner(agent, route));
+        assertEquals("entry", CsMessageScopeHelper.authorReadOwner(agent, route));
+        assertEquals("entry", CsMessageScopeHelper.authorReadOwner(robot, route));
     }
 
     @Test
     void systemNoticeIsNotUnread() {
         CsImSessionRoute route = route();
         Message system = message("system", MessageFromToTypeEnum.SYSTEM.getType());
-        assertNull(CsMessageScopeHelper.incomingUnreadSide(system, route));
-        assertNull(CsMessageScopeHelper.authorReadSide(system, route));
+        assertNull(CsMessageScopeHelper.incomingUnreadOwner(system, route));
+        assertNull(CsMessageScopeHelper.authorReadOwner(system, route));
     }
 
     private static Message message(String from, int fromType) {

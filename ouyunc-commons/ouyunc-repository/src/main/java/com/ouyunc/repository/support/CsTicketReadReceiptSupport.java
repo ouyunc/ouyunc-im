@@ -1,6 +1,5 @@
 package com.ouyunc.repository.support;
 
-import com.ouyunc.base.constant.CacheConstant;
 import com.ouyunc.base.constant.MessageConstant;
 import com.ouyunc.base.constant.enums.MessageIndexScopeEnum;
 import com.ouyunc.base.model.Metadata;
@@ -12,7 +11,6 @@ import org.apache.commons.collections4.CollectionUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.data.redis.core.StringRedisTemplate;
 import reactor.core.publisher.Mono;
 import reactor.core.scheduler.Schedulers;
 
@@ -27,14 +25,11 @@ public final class CsTicketReadReceiptSupport {
     private static final Logger log = LoggerFactory.getLogger(CsTicketReadReceiptSupport.class);
 
     private final SpecialMessageLoader specialMessageLoader;
-    private final StringRedisTemplate stringRedisTemplate;
     private final CsTicketUnreadSupport ticketUnread;
 
     public CsTicketReadReceiptSupport(SpecialMessageLoader specialMessageLoader,
-                                      StringRedisTemplate stringRedisTemplate,
                                       CsTicketUnreadSupport ticketUnread) {
         this.specialMessageLoader = specialMessageLoader;
-        this.stringRedisTemplate = stringRedisTemplate;
         this.ticketUnread = ticketUnread;
     }
 
@@ -47,11 +42,14 @@ public final class CsTicketReadReceiptSupport {
         if (message == null || message.getMetadata() == null) {
             return Mono.empty();
         }
-        if (StringUtils.isBlank(CsMessageScopeHelper.authorReadSide(message, route))) {
+        if (!CsMessageScopeHelper.isVisitorAuthor(message, route)
+                && !CsMessageScopeHelper.isStaffAuthor(message, route)) {
+            return Mono.empty();
+        }
+        if (StringUtils.isBlank(CsMessageScopeHelper.authorReadOwner(message, route))) {
             return Mono.empty();
         }
         String ticketId = route.ticketId().trim();
-        String appKey = message.getMetadata().getIngress().getAppKey();
         return specialMessageLoader.reactiveLoadValidatedSpecialPackets(
                 packet, ticketId, MessageIndexScopeEnum.CS_TICKET,
                 MessageConstant.MAX_READ_RECEIPT_MESSAGE_COUNT,
@@ -79,8 +77,12 @@ public final class CsTicketReadReceiptSupport {
         if (metadata == null || StringUtils.isBlank(route.ticketId())) {
             return Mono.just(false);
         }
-        String side = CsMessageScopeHelper.authorReadSide(message, route);
-        if (StringUtils.isBlank(side)) {
+        if (!CsMessageScopeHelper.isVisitorAuthor(message, route)
+                && !CsMessageScopeHelper.isStaffAuthor(message, route)) {
+            return Mono.just(false);
+        }
+        String ownerId = CsMessageScopeHelper.authorReadOwner(message, route);
+        if (StringUtils.isBlank(ownerId)) {
             return Mono.just(false);
         }
         Long maxReadPacketId = null;
@@ -97,12 +99,12 @@ public final class CsTicketReadReceiptSupport {
         final long incomingOffset = maxReadPacketId;
         final String appKey = metadata.getIngress().getAppKey();
         final String ticketId = route.ticketId().trim();
-        return Mono.fromCallable(() -> getTicketReadOffset(appKey, ticketId, side))
+        return Mono.fromCallable(() -> ticketUnread.getReadOffset(appKey, ownerId, ticketId))
                 .subscribeOn(Schedulers.boundedElastic())
                 .flatMap(stored -> {
                     long merged = Math.max(incomingOffset, stored);
                     return Mono.fromCallable(() -> ticketUnread.clearOnRead(
-                                    appKey, ticketId, side, merged, expireTime))
+                                    appKey, ownerId, ticketId, merged, expireTime))
                             .subscribeOn(Schedulers.boundedElastic());
                 });
     }
@@ -121,36 +123,21 @@ public final class CsTicketReadReceiptSupport {
             return false;
         }
         Message message = packet.getMessage();
-        String side = CsMessageScopeHelper.authorReadSide(message, route);
         // 系统通知不是坐席/访客作者，不推进水位，也不拦截投递。
-        if (StringUtils.isBlank(side)) {
+        if (!CsMessageScopeHelper.isVisitorAuthor(message, route)
+                && !CsMessageScopeHelper.isStaffAuthor(message, route)) {
             return true;
+        }
+        String ownerId = CsMessageScopeHelper.authorReadOwner(message, route);
+        if (StringUtils.isBlank(ownerId)) {
+            return false;
         }
         return ticketUnread.clearOnRead(
                         message.getMetadata().getIngress().getAppKey(),
+                        ownerId,
                         route.ticketId().trim(),
-                        side,
                         packet.getPacketId(),
                         expireTime);
     }
 
-    /** 只读工单 Redis 水位。未写入视为 0。 */
-    long getTicketReadOffset(String appKey, String ticketId, String side) {
-        if (StringUtils.isAnyBlank(appKey, ticketId, side)) {
-            return 0L;
-        }
-        Object rawObj = stringRedisTemplate.opsForHash().get(
-                CacheConstant.buildCsTicketReadOffsetHashCacheKey(appKey, ticketId.trim()),
-                side);
-        String raw = rawObj == null ? null : rawObj.toString();
-        if (StringUtils.isBlank(raw)) {
-            return 0L;
-        }
-        try {
-            return Long.parseLong(raw.trim());
-        } catch (NumberFormatException ex) {
-            log.warn("ticket sro 非数字 appKey={} ticketId={} side={} raw={}", appKey, ticketId, side, raw);
-            return 0L;
-        }
-    }
 }

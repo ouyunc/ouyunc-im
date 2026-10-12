@@ -43,7 +43,7 @@ public final class RepositorySupports {
     public static final CsTicketMessagePersistenceSupport CS_TICKET_MESSAGE =
             new CsTicketMessagePersistenceSupport(SESSION, CS_TICKET_UNREAD);
     public static final CsTicketReadReceiptSupport CS_TICKET_READ_RECEIPT =
-            new CsTicketReadReceiptSupport(SPECIAL_MESSAGE_LOADER, INFRA.stringRedisTemplate, CS_TICKET_UNREAD);
+            new CsTicketReadReceiptSupport(SPECIAL_MESSAGE_LOADER, CS_TICKET_UNREAD);
 
     private RepositorySupports() {
     }
