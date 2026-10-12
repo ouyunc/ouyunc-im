@@ -7,25 +7,22 @@ import com.ouyunc.base.constant.MessageConstant;
 import com.ouyunc.base.constant.NumberConstant;
 import com.ouyunc.base.constant.enums.ExceptionCodeEnum;
 import com.ouyunc.base.constant.enums.LuaScriptEnum;
-import com.ouyunc.base.constant.enums.MessageFromToTypeEnum;
 import com.ouyunc.base.packet.Packet;
 import com.ouyunc.base.packet.message.Message;
-import com.ouyunc.core.device.DeviceTypeRegistry;
 import com.ouyunc.core.context.MessageContext;
 import com.ouyunc.repository.cs.CsImSessionRoute;
-import org.apache.commons.collections4.CollectionUtils;
+import com.ouyunc.repository.cs.CsMessageScopeHelper;
 import org.apache.commons.lang3.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.data.redis.core.SessionCallback;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.data.redis.core.script.DefaultRedisScript;
 
-import java.util.Collection;
 import java.util.List;
 
 /**
- * 客服咨询单（ticket）维度未读：Hash 计数 + packetId ZSET（超限只留最新），支持按 offset 部分清除。
+ * 咨询单未读只有两份：staff（访客消息，任一坐席/机器人已读即推进）、visitor（坐席消息）。
+ * 不按坐席、不按设备拆。转接不搬这两份。
  */
 public final class CsTicketUnreadSupport {
 
@@ -44,7 +41,7 @@ public final class CsTicketUnreadSupport {
         if (packet == null || route == null || !SpecialMessageTargetValidator.isChatTargetMessage(packet)) {
             return true;
         }
-        // 撤回覆盖后的正式快照仍可能进入 COMMITTED 修复，不能再次增加任何坐席/访客未读。
+        // 撤回覆盖后的正式快照仍可能进入 COMMITTED 修复，不能再次增加未读。
         if (packet.getRetain() == NumberConstant.NUMBER_1) {
             return true;
         }
@@ -52,98 +49,65 @@ public final class CsTicketUnreadSupport {
         if (message == null || message.getMetadata() == null) {
             return true;
         }
+        String side = CsMessageScopeHelper.incomingUnreadSide(message, route);
         String appKey = message.getMetadata().getIngress().getAppKey();
         String ticketId = route.ticketId();
-        String recipientId = resolveRecipientId(message, route);
-        if (StringUtils.isAnyBlank(appKey, ticketId, recipientId)) {
+        if (StringUtils.isAnyBlank(appKey, ticketId, side)) {
             return true;
         }
         long packetId = packet.getPacketId();
         if (packetId <= 0L) {
             return false;
         }
-        Collection<Byte> deviceTypes = resolveDeviceTypes(appKey, recipientId);
-        if (CollectionUtils.isEmpty(deviceTypes)) {
-            return true;
+        return executeIncr(appKey, ticketId.trim(), side, packetId);
+    }
+
+    /**
+     * @param side {@link CacheConstant#CS_TICKET_UNREAD_STAFF} 或 {@link CacheConstant#CS_TICKET_UNREAD_VISITOR}
+     * @return true 表示 Redis 已提交；失败返回 false，调用方不得当作已读成功
+     */
+    public boolean clearOnRead(String appKey, String ticketId, String side, long incomingOffset, long expireTimeMs) {
+        if (StringUtils.isAnyBlank(appKey, ticketId, side) || incomingOffset <= 0L) {
+            return false;
         }
-        String urKey = CacheConstant.buildCsTicketUnreadHashCacheKey(appKey, ticketId.trim());
-        String sroKey = CacheConstant.buildCsTicketReadOffsetHashCacheKey(appKey, ticketId.trim());
+        String tid = ticketId.trim();
+        String urKey = CacheConstant.buildCsTicketUnreadHashCacheKey(appKey, tid);
+        String sroKey = CacheConstant.buildCsTicketReadOffsetHashCacheKey(appKey, tid);
+        String uridKey = CacheConstant.buildCsTicketUnreadIdsCacheKey(appKey, tid, side);
+        try {
+            DefaultRedisScript<String> script = new DefaultRedisScript<>(
+                    LuaScriptEnum.CS_TICKET_CLEAR_UNREAD_ON_READ_SCRIPT.getScript(), String.class);
+            String confirmed = stringRedisTemplate.execute(script, List.of(urKey, sroKey, uridKey),
+                    side, String.valueOf(incomingOffset), String.valueOf(expireTimeMs));
+            return confirmed != null && !confirmed.isBlank();
+        } catch (Exception e) {
+            log.error("clearCsTicketUnread failed appKey={} ticketId={} side={} offset={}",
+                    appKey, ticketId, side, incomingOffset, e);
+            ExceptionReporter.reportSystem(ExceptionCodeEnum.CACHE_PERSISTENCE_ERROR,
+                    "客服 ticket 已读清未读失败: " + e.getMessage(), "CsTicketUnreadSupport", null, e);
+            return false;
+        }
+    }
+
+    private boolean executeIncr(String appKey, String ticketId, String side, long packetId) {
+        String urKey = CacheConstant.buildCsTicketUnreadHashCacheKey(appKey, ticketId);
+        String sroKey = CacheConstant.buildCsTicketReadOffsetHashCacheKey(appKey, ticketId);
+        String uridKey = CacheConstant.buildCsTicketUnreadIdsCacheKey(appKey, ticketId, side);
         String packetIdArg = MessageContext.idGenerator().formatLongId19Str(packetId);
         long ttl = MessageConstant.CACHE_USER_DEVICE_UNREAD_EXPIRE_TIMESTAMP;
         int storeMax = MessageConstant.SESSION_UNREAD_STORE_MAX;
         DefaultRedisScript<Long> script = new DefaultRedisScript<>(
                 LuaScriptEnum.CS_TICKET_UNREAD_INCR_SCRIPT.getScript(), Long.class);
         try {
-            stringRedisTemplate.executePipelined(new SessionCallback<>() {
-                @Override
-                @SuppressWarnings({"unchecked", "rawtypes"})
-                public Object execute(org.springframework.data.redis.core.RedisOperations operations) {
-                    for (Byte deviceType : deviceTypes) {
-                        String field = CacheConstant.buildCsTicketReaderDeviceField(recipientId, deviceType);
-                        String uridKey = CacheConstant.buildCsTicketUnreadIdsCacheKey(
-                                appKey, ticketId.trim(), field);
-                        operations.execute(script, List.of(urKey, sroKey, uridKey),
-                                field, packetIdArg, "1", String.valueOf(storeMax), String.valueOf(ttl));
-                    }
-                    return null;
-                }
-            });
+            stringRedisTemplate.execute(script, List.of(urKey, sroKey, uridKey),
+                    side, packetIdArg, "1", String.valueOf(storeMax), String.valueOf(ttl));
             return true;
         } catch (Exception e) {
-            log.error("incrCsTicketUnread failed appKey={} ticketId={} recipient={} packetId={}",
-                    appKey, ticketId, recipientId, packetId, e);
-            ExceptionReporter.reportSystem(ExceptionCodeEnum.CACHE_PERSISTENCE_ERROR, "客服 ticket 未读索引更新失败: " + e.getMessage(), "CsTicketUnreadSupport", packet, e);
+            log.error("incrCsTicketUnread failed appKey={} ticketId={} side={} packetId={}",
+                    appKey, ticketId, side, packetId, e);
+            ExceptionReporter.reportSystem(ExceptionCodeEnum.CACHE_PERSISTENCE_ERROR,
+                    "客服 ticket 未读索引更新失败: " + e.getMessage(), "CsTicketUnreadSupport", null, e);
             return false;
         }
-    }
-
-    /**
-     * @return true 表示 Redis 已提交；失败返回 false，调用方不得当作已读成功
-     */
-    public boolean clearOnRead(String appKey, String ticketId, String readerId, byte deviceType, long incomingOffset,
-                               long expireTimeMs) {
-        if (StringUtils.isAnyBlank(appKey, ticketId, readerId)) {
-            return false;
-        }
-        String tid = ticketId.trim();
-        String urKey = CacheConstant.buildCsTicketUnreadHashCacheKey(appKey, tid);
-        String sroKey = CacheConstant.buildCsTicketReadOffsetHashCacheKey(appKey, tid);
-        String field = CacheConstant.buildCsTicketReaderDeviceField(readerId, deviceType);
-        String uridKey = CacheConstant.buildCsTicketUnreadIdsCacheKey(appKey, tid, field);
-        try {
-            DefaultRedisScript<String> script = new DefaultRedisScript<>(
-                    LuaScriptEnum.CS_TICKET_CLEAR_UNREAD_ON_READ_SCRIPT.getScript(), String.class);
-            String confirmed = stringRedisTemplate.execute(script, List.of(urKey, sroKey, uridKey),
-                    field, String.valueOf(incomingOffset), String.valueOf(expireTimeMs));
-            return confirmed != null && !confirmed.isBlank();
-        } catch (Exception e) {
-            log.error("clearCsTicketUnread failed appKey={} ticketId={} reader={} offset={}",
-                    appKey, ticketId, readerId, incomingOffset, e);
-            ExceptionReporter.reportSystem(ExceptionCodeEnum.CACHE_PERSISTENCE_ERROR, "客服 ticket 已读清未读失败: " + e.getMessage(), "CsTicketUnreadSupport", null, e);
-            return false;
-        }
-    }
-
-    static String resolveRecipientId(Message message, CsImSessionRoute route) {
-        if (message == null || route == null) {
-            return null;
-        }
-        int fromType = message.getFromType();
-        if (fromType == MessageFromToTypeEnum.CS_VISITOR.getType()
-                || StringUtils.equals(message.getFrom(), route.userId())) {
-            return route.assigneeId();
-        }
-        if (fromType == MessageFromToTypeEnum.CS_AGENT.getType()) {
-            return route.userId();
-        }
-        return null;
-    }
-
-    private static Collection<Byte> resolveDeviceTypes(String appKey, String userId) {
-        Collection<Byte> deviceTypes = DeviceTypeRegistry.list(appKey, userId);
-        if (CollectionUtils.isEmpty(deviceTypes)) {
-            deviceTypes = DeviceTypeRegistry.list(appKey);
-        }
-        return deviceTypes;
     }
 }

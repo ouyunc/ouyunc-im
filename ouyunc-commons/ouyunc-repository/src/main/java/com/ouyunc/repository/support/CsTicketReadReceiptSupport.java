@@ -1,26 +1,18 @@
 package com.ouyunc.repository.support;
 
 import com.ouyunc.base.constant.CacheConstant;
-import com.ouyunc.base.constant.JdbcSqlDialectHolder;
 import com.ouyunc.base.constant.MessageConstant;
-import com.ouyunc.base.constant.enums.IdentityType;
 import com.ouyunc.base.constant.enums.MessageIndexScopeEnum;
 import com.ouyunc.base.model.Metadata;
 import com.ouyunc.base.packet.Packet;
 import com.ouyunc.base.packet.message.Message;
-import com.ouyunc.domain.entity.SessionMessageOffsetEntity;
 import com.ouyunc.repository.cs.CsImSessionRoute;
 import com.ouyunc.repository.cs.CsMessageScopeHelper;
 import org.apache.commons.collections4.CollectionUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.dao.EmptyResultDataAccessException;
-import org.springframework.data.mongodb.core.MongoTemplate;
-import org.springframework.data.mongodb.core.query.Criteria;
-import org.springframework.data.mongodb.core.query.Query;
 import org.springframework.data.redis.core.StringRedisTemplate;
-import org.springframework.jdbc.core.simple.JdbcClient;
 import reactor.core.publisher.Mono;
 import reactor.core.scheduler.Schedulers;
 
@@ -37,19 +29,13 @@ public final class CsTicketReadReceiptSupport {
     private final SpecialMessageLoader specialMessageLoader;
     private final StringRedisTemplate stringRedisTemplate;
     private final CsTicketUnreadSupport ticketUnread;
-    private final MongoTemplate mongoTemplate;
-    private final JdbcClient jdbcClient;
 
     public CsTicketReadReceiptSupport(SpecialMessageLoader specialMessageLoader,
                                       StringRedisTemplate stringRedisTemplate,
-                                      CsTicketUnreadSupport ticketUnread,
-                                      MongoTemplate mongoTemplate,
-                                      JdbcClient jdbcClient) {
+                                      CsTicketUnreadSupport ticketUnread) {
         this.specialMessageLoader = specialMessageLoader;
         this.stringRedisTemplate = stringRedisTemplate;
         this.ticketUnread = ticketUnread;
-        this.mongoTemplate = mongoTemplate;
-        this.jdbcClient = jdbcClient;
     }
 
     public Mono<List<Packet>> reactiveLoadValidatedCsReadReceiptPackets(Packet packet, CsImSessionRoute route,
@@ -61,8 +47,7 @@ public final class CsTicketReadReceiptSupport {
         if (message == null || message.getMetadata() == null) {
             return Mono.empty();
         }
-        String readerId = CsMessageScopeHelper.resolveReaderId(message, route);
-        if (StringUtils.isBlank(readerId)) {
+        if (StringUtils.isBlank(CsMessageScopeHelper.authorReadSide(message, route))) {
             return Mono.empty();
         }
         String ticketId = route.ticketId().trim();
@@ -94,8 +79,8 @@ public final class CsTicketReadReceiptSupport {
         if (metadata == null || StringUtils.isBlank(route.ticketId())) {
             return Mono.just(false);
         }
-        String readerId = CsMessageScopeHelper.resolveReaderId(message, route);
-        if (StringUtils.isBlank(readerId)) {
+        String side = CsMessageScopeHelper.authorReadSide(message, route);
+        if (StringUtils.isBlank(side)) {
             return Mono.just(false);
         }
         Long maxReadPacketId = null;
@@ -112,16 +97,12 @@ public final class CsTicketReadReceiptSupport {
         final long incomingOffset = maxReadPacketId;
         final String appKey = metadata.getIngress().getAppKey();
         final String ticketId = route.ticketId().trim();
-        return Mono.fromCallable(() -> getTicketReadOffset(appKey, ticketId, readerId, deviceType))
+        return Mono.fromCallable(() -> getTicketReadOffset(appKey, ticketId, side))
                 .subscribeOn(Schedulers.boundedElastic())
                 .flatMap(stored -> {
-                    // 同一咨询单的旧回执只补齐已有水位；冷库查询失败时保持失败关闭。
-                    if (stored == Long.MAX_VALUE) {
-                        return Mono.just(false);
-                    }
                     long merged = Math.max(incomingOffset, stored);
                     return Mono.fromCallable(() -> ticketUnread.clearOnRead(
-                                    appKey, ticketId, readerId, deviceType, merged, expireTime))
+                                    appKey, ticketId, side, merged, expireTime))
                             .subscribeOn(Schedulers.boundedElastic());
                 });
     }
@@ -140,72 +121,36 @@ public final class CsTicketReadReceiptSupport {
             return false;
         }
         Message message = packet.getMessage();
-        String readerId = CsMessageScopeHelper.resolveReaderId(message, route);
-        if (StringUtils.isBlank(readerId)) {
-            return false;
+        String side = CsMessageScopeHelper.authorReadSide(message, route);
+        // 系统通知不是坐席/访客作者，不推进水位，也不拦截投递。
+        if (StringUtils.isBlank(side)) {
+            return true;
         }
         return ticketUnread.clearOnRead(
                         message.getMetadata().getIngress().getAppKey(),
                         route.ticketId().trim(),
-                        readerId,
-                        deviceType,
+                        side,
                         packet.getPacketId(),
                         expireTime);
     }
 
-    long getTicketReadOffset(String appKey, String ticketId, String readerId, byte deviceType) {
-        if (StringUtils.isAnyBlank(appKey, ticketId, readerId)) {
+    /** 只读工单 Redis 水位。未写入视为 0。 */
+    long getTicketReadOffset(String appKey, String ticketId, String side) {
+        if (StringUtils.isAnyBlank(appKey, ticketId, side)) {
             return 0L;
         }
-        String field = CacheConstant.buildCsTicketReaderDeviceField(readerId, deviceType);
         Object rawObj = stringRedisTemplate.opsForHash().get(
                 CacheConstant.buildCsTicketReadOffsetHashCacheKey(appKey, ticketId.trim()),
-                field);
+                side);
         String raw = rawObj == null ? null : rawObj.toString();
-        if (StringUtils.isNotBlank(raw)) {
-            try {
-                return Long.parseLong(raw.trim());
-            } catch (NumberFormatException ex) {
-                log.warn("ticket sro 非数字 appKey={} ticketId={} raw={}", appKey, ticketId, raw);
-            }
-        }
-        return loadTicketReadOffsetFromStore(appKey, readerId, ticketId, deviceType);
-    }
-
-    private long loadTicketReadOffsetFromStore(String appKey, String readerId, String ticketId, byte deviceType) {
-        if (mongoTemplate != null) {
-            SessionMessageOffsetEntity row = mongoTemplate.findOne(
-                    Query.query(Criteria.where(SessionMessageOffsetEntity.Fields.from).is(readerId)
-                            .and(SessionMessageOffsetEntity.Fields.to).is(ticketId)
-                            .and(SessionMessageOffsetEntity.Fields.type).is(IdentityType.CUSTOMER_SERVICE.value())
-                            .and(SessionMessageOffsetEntity.Fields.deviceType).is(deviceType)
-                            .and(SessionMessageOffsetEntity.Fields.appKey).is(appKey)),
-                    SessionMessageOffsetEntity.class);
-            if (row != null && row.getSessionMessageOffset() != null) {
-                return row.getSessionMessageOffset();
-            }
-        }
-        if (jdbcClient == null) {
+        if (StringUtils.isBlank(raw)) {
             return 0L;
         }
         try {
-            SessionMessageOffsetEntity row = jdbcClient.sql(JdbcSqlDialectHolder.selectSessionMessageOffset())
-                    .param(SessionMessageOffsetEntity.Fields.from, readerId)
-                    .param(SessionMessageOffsetEntity.Fields.to, ticketId)
-                    .param(SessionMessageOffsetEntity.Fields.type, IdentityType.CUSTOMER_SERVICE.value())
-                    .param(SessionMessageOffsetEntity.Fields.deviceType, deviceType)
-                    .param(SessionMessageOffsetEntity.Fields.appKey, appKey)
-                    .query(SessionMessageOffsetEntity.class)
-                    .single();
-            Long offset = row.getSessionMessageOffset();
-            return offset != null ? offset : 0L;
-        } catch (EmptyResultDataAccessException ex) {
+            return Long.parseLong(raw.trim());
+        } catch (NumberFormatException ex) {
+            log.warn("ticket sro 非数字 appKey={} ticketId={} side={} raw={}", appKey, ticketId, side, raw);
             return 0L;
-        } catch (Exception ex) {
-            // B9：DB 异常 fail-closed，禁止当作 offset=0
-            log.warn("加载 ticket 已读 offset 失败(fail-closed) appKey={} reader={} ticketId={}: {}",
-                    appKey, readerId, ticketId, ex.getMessage());
-            return Long.MAX_VALUE;
         }
     }
 }

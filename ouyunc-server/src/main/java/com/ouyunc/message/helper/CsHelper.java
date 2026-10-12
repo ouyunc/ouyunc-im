@@ -59,11 +59,6 @@ public final class CsHelper {
         return CsMessageScopeHelper.ticketMessageScopeId(route);
     }
 
-    /** 已读 offset / 未读归属的真实用户 id（坐席用 assigneeId，访客用 userId）。 */
-    public static String resolveReaderId(Message message, CsImSessionRoute route) {
-        return CsMessageScopeHelper.resolveReaderId(message, route);
-    }
-
     /**
      * 解析接收方下行渠道：坐席始终 IM；访客按 route.channelType（whatsapp/telegram/line → 外渠 Kafka）。
      */

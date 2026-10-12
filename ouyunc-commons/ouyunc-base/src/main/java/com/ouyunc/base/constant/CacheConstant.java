@@ -259,13 +259,22 @@ public class CacheConstant {
     /** 客服咨询单消息 ZSet 索引（ticket 维度，与 channel sessionId 分离）。 */
     private static final String MSGS = "msgs";
 
-    /** ticket 维度已读 offset Hash：field={@code readerId:deviceType}，value=max packetId。 */
+    /** ticket 已读/未读 Hash 的坐席侧 field。任一坐席或机器人已读、回复都推进这一份。 */
+    public static final String CS_TICKET_UNREAD_STAFF = "staff";
+
+    /** ticket 已读/未读 Hash 的访客侧 field。只记访客还没读的坐席/机器人消息。 */
+    public static final String CS_TICKET_UNREAD_VISITOR = "visitor";
+
+    /** 工单水位落库不按设备拆，固定占位。 */
+    public static final byte CS_TICKET_OFFSET_DEVICE = 0;
+
+    /** ticket 维度已读 offset Hash：field={@code staff}/{@code visitor}，value=max packetId。 */
     private static final String CS_TICKET_SRO = "session-read";
 
-    /** ticket 维度未读 Hash：field={@code readerId:deviceType}，value=未读计数。 */
+    /** ticket 维度未读 Hash：field={@code staff}/{@code visitor}，value=未读计数。 */
     private static final String CS_TICKET_UR = "unread";
 
-    /** ticket 维度未读 packetId 集合后缀（按 readerDeviceField 分 key）。 */
+    /** ticket 维度未读 packetId 集合后缀（按 staff/visitor 分 key）。 */
     private static final String CS_TICKET_UR_IDS = "unread-ids";
 
     // ---------- 内容安全（敏感词 / 策略 / 热更新）----------
@@ -888,15 +897,12 @@ public class CacheConstant {
     }
 
     /**
-     * ticket 未读 packetId 集合：与 unread/session-read Hash 同 ticket 槽，支持按 offset 部分清除。
+     * ticket 未读 packetId 集合：与 unread/session-read Hash 同 ticket 槽。
+     *
+     * @param side {@link #CS_TICKET_UNREAD_STAFF} 或 {@link #CS_TICKET_UNREAD_VISITOR}
      */
-    public static String buildCsTicketUnreadIdsCacheKey(String appKey, String ticketId, String readerDeviceField) {
-        return buildCsTicketAggregateKeyPrefix(appKey, ticketId) + CS_TICKET_UR_IDS + COLON + readerDeviceField;
-    }
-
-    /** ticket 已读/未读 Hash field：{@code readerId + ":" + deviceType}。 */
-    public static String buildCsTicketReaderDeviceField(String readerId, byte deviceType) {
-        return readerId + COLON + deviceType;
+    public static String buildCsTicketUnreadIdsCacheKey(String appKey, String ticketId, String side) {
+        return buildCsTicketAggregateKeyPrefix(appKey, ticketId) + CS_TICKET_UR_IDS + COLON + side;
     }
 
     /**
