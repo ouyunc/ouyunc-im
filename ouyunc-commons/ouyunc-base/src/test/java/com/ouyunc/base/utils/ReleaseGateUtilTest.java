@@ -49,9 +49,12 @@ class ReleaseGateUtilTest {
     }
 
     @Test
-    void loginRawMatchesDocumentedFormat() {
-        assertEquals("ak&user:1&100_secret", LoginSignatureUtil.buildRaw("ak", "user:1", 100L, "secret"));
-        assertEquals(MD5Util.md5("ak&id&1_sec"), MD5Util.md5(LoginSignatureUtil.buildRaw("ak", "id", 1L, "sec")));
+    void loginHmacDoesNotPutSecretInPayload() {
+        assertEquals("ak&user:1&100", LoginSignatureUtil.buildPayload("ak", "user:1", 100L));
+        String sign = LoginSignatureUtil.sign("ak", "id", 1L, "sec");
+        assertTrue(LoginSignatureUtil.matches("ak", "id", 1L, "sec", sign));
+        assertFalse(LoginSignatureUtil.matches("ak", "id", 1L, "other", sign));
+        assertFalse(LoginSignatureUtil.matches("ak", "id", 2L, "sec", sign));
     }
 
     @Test

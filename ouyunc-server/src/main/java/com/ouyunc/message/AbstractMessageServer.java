@@ -4,6 +4,9 @@ import com.ouyunc.base.constant.enums.DeviceTypeEnum;
 import com.ouyunc.base.constant.enums.MessageEventTypeEnum;
 import com.ouyunc.base.exception.MessageException;
 import com.ouyunc.base.executor.ThreadPoolManager;
+import com.ouyunc.cache.config.CacheFactory;
+import com.ouyunc.db.jdbc.JdbcFactory;
+import com.ouyunc.db.mongo.MongodbFactory;
 import com.ouyunc.base.utils.TimeUtil;
 import com.ouyunc.core.device.DeviceTypeRegistry;
 import com.ouyunc.core.listener.MessageEventMulticaster;
@@ -200,6 +203,10 @@ public abstract class AbstractMessageServer implements MessageServer {
             });
             shutdownStep("events", AbstractMessageServer::shutdownEventMulticaster);
             shutdownStep("threadPools", ThreadPoolManager::shutdownAll);
+            // 业务线程已停止后再关连接，顺序为 Redis、Mongo、Hikari，避免先断库再断缓存导致收尾回源。
+            shutdownStep("redis", CacheFactory::shutdownAll);
+            shutdownStep("mongo", MongodbFactory::shutdown);
+            shutdownStep("hikari", JdbcFactory::shutdown);
         } finally {
             // 即使排空异常也先封闭发号，再归还机器号；后续残留任务只能失败，不能继续发号。
             if (MessageServerContext.idGenerator() instanceof com.ouyunc.id.CosIdSnowflakeIdGenerator generator) {

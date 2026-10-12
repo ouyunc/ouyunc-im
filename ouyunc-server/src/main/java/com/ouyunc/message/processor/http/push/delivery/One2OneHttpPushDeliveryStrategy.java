@@ -159,7 +159,7 @@ public final class One2OneHttpPushDeliveryStrategy implements HttpProcessor {
             // 派生索引失败时保留未完成状态，首次执行与重入使用相同的修复路径。
             DefaultRepository.INSTANCE.saveLastMessageForSession(
                     IdentityUtil.sessionId(packet.getMessage().getFrom(), packet.getMessage().getTo()), packet,
-                    MessageConstant.CACHE_SESSION_LAST_MESSAGE_KEY_EXPIRE_TIMESTAMP, TimeUnit.MILLISECONDS);
+                    MessageContext.messageHotDataTtlMillis(), TimeUnit.MILLISECONDS);
             SenderReadCompletionSupport.complete(packet, IdentityType.ONE_2_ONE);
             MessageDeliveryPlanner.deliverPeerMessage(packet, false);
         });

@@ -208,10 +208,9 @@ public final class SessionMessagePersistenceSupport {
             log.debug("Pipeline 已开启");
 
             conn.zAdd(sessionKeyBytes, NumberConstant.NUMBER_0, packetIdBytes);
-            long sessionZSetExpireMs = MessageConstant.CACHE_SESSION_LAST_MESSAGE_KEY_EXPIRE_TIMESTAMP;
-            if (sessionZSetExpireMs > 0) {
-                conn.keyCommands().pExpire(sessionKeyBytes, sessionZSetExpireMs);
-            }
+            // 会话索引与正文共用本次写入的 hot TTL。每次新消息都会刷新整个 ZSet 的过期时间。
+            long sessionZSetExpireMs = expireTime > 0 ? expireTime : MessageContext.messageHotDataTtlMillis();
+            conn.keyCommands().pExpire(sessionKeyBytes, sessionZSetExpireMs);
             conn.zSetCommands().zRemRange(sessionKeyBytes, 0, -(MessageConstant.SESSION_ZSET_MAX_SIZE + 1L));
             log.debug("会话ZSet命令入队: {}", sessionKey);
 

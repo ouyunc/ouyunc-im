@@ -299,8 +299,8 @@ public class ClientHelper {
     }
 
     /**
-     * 目录写加同端锁：读出上一会话，若其 lastLoginTime 严格更大则拒绑（跨节点 fencing）；
-     * 否则覆盖绑定并返回上一会话供调用方踢线。
+     * 目录写加同端锁：读出上一会话，若其 lastLoginTime 大于等于本次则拒绑（跨节点 fencing）。
+     * 同毫秒后来者不能覆盖先写入的会话。否则覆盖绑定并返回上一会话供调用方踢线。
      */
     private static LoginClientInfo doBindRemote(LoginClientInfo loginClientInfo, String comboIdentity) {
         RLock lock = MessageServerContext.redissonClient.getLock(
@@ -319,7 +319,7 @@ public class ClientHelper {
                             : routeLoginInfo(loginClientInfo.getAppKey(), loginClientInfo.getIdentity(),
                             loginClientInfo.getDeviceType(), authoritativeRoute);
                     if (previous != null
-                            && previous.getLastLoginTime() > loginClientInfo.getLastLoginTime()) {
+                            && previous.getLastLoginTime() >= loginClientInfo.getLastLoginTime()) {
                         log.warn("登录 fencing 拒绝更旧会话 combo={} previousTs={} currentTs={}",
                                 comboIdentity, previous.getLastLoginTime(), loginClientInfo.getLastLoginTime());
                         throw new MessageException("登录绑定失败：已有更新会话");

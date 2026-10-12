@@ -12,7 +12,8 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
- * 原生登录校验：scope、建档、签名 {@code MD5(appKey&identity&createTime_appSecret)}。
+ * 原生登录校验：scope、用户建档、HMAC-SHA256、一次性 createTime。
+ * 签名原文为 {@code appKey&identity&createTime}，appSecret 只作 HMAC 密钥。
  */
 public final class LoginAuthValidator {
 
@@ -28,8 +29,7 @@ public final class LoginAuthValidator {
         if (StringUtils.isAnyBlank(loginContent.getAppKey(), loginContent.getIdentity(), loginContent.getSignature())) {
             return false;
         }
-        if (LoginScopeEnum.isCustomerService(loginContent.getScope())
-                && !LoginUserValidator.userExists(loginContent.getAppKey(), loginContent.getIdentity())) {
+        if (!LoginUserValidator.userExists(loginContent.getAppKey(), loginContent.getIdentity())) {
             return false;
         }
         AppEntity app = DefaultRepository.INSTANCE.getAppEntity(loginContent.getAppKey());
@@ -43,12 +43,17 @@ public final class LoginAuthValidator {
                     loginContent.getAppKey(), loginContent.getIdentity());
             return false;
         }
-        String raw = LoginSignatureUtil.buildRaw(
-                loginContent.getAppKey(), loginContent.getIdentity(), createTime, app.getAppSecret());
-        Encrypt.AsymmetricEncrypt algo = Encrypt.AsymmetricEncrypt.prototype(loginContent.getSignatureAlgorithm());
-        if (algo == null) {
-            algo = Encrypt.AsymmetricEncrypt.MD5;
+        if (loginContent.getSignatureAlgorithm() != Encrypt.AsymmetricEncrypt.HMAC_SHA256.getValue()) {
+            log.warn("登录签名校验失败：只接受 HMAC-SHA256 appKey={} identity={} algorithm={}",
+                    loginContent.getAppKey(), loginContent.getIdentity(), loginContent.getSignatureAlgorithm());
+            return false;
         }
-        return algo.validate(raw, loginContent.getSignature());
+        if (!LoginSignatureUtil.matches(loginContent.getAppKey(), loginContent.getIdentity(),
+                createTime, app.getAppSecret(), loginContent.getSignature())) {
+            log.warn("登录签名校验失败：HMAC 不匹配 appKey={} identity={}",
+                    loginContent.getAppKey(), loginContent.getIdentity());
+            return false;
+        }
+        return LoginNonceStore.consume(loginContent.getAppKey(), loginContent.getIdentity(), createTime);
     }
 }

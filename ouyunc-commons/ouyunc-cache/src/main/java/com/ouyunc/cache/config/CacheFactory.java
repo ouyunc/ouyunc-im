@@ -4,6 +4,9 @@ import com.ouyunc.cache.config.redis.builder.*;
 import com.ouyunc.cache.config.redis.properties.RedisProperties;
 import org.redisson.api.RedissonClient;
 import org.redisson.api.RedissonReactiveClient;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.data.redis.connection.lettuce.LettuceConnectionFactory;
 import org.springframework.data.redis.core.ReactiveRedisTemplate;
 import org.springframework.data.redis.core.ReactiveStringRedisTemplate;
 import org.springframework.data.redis.core.RedisTemplate;
@@ -51,6 +54,14 @@ public enum CacheFactory {
             }
             return  redisTemplateMap.get(database);
         }
+
+        @Override
+        public void shutdownResources() {
+            synchronized (LOCK) {
+                redisTemplateMap.values().forEach(template -> destroyConnectionFactory(template.getConnectionFactory()));
+                redisTemplateMap.clear();
+            }
+        }
     },
 
     // reactive redis  响应式
@@ -87,6 +98,14 @@ public enum CacheFactory {
             }
             return  reactiveRedisTemplateMap.get(database);
         }
+
+        @Override
+        public void shutdownResources() {
+            synchronized (LOCK) {
+                reactiveRedisTemplateMap.values().forEach(template -> destroyConnectionFactory(template.getConnectionFactory()));
+                reactiveRedisTemplateMap.clear();
+            }
+        }
     },
     // redis
     STRING_REDIS {
@@ -121,6 +140,14 @@ public enum CacheFactory {
                 }
             }
             return  stringRedisTemplateMap.get(database);
+        }
+
+        @Override
+        public void shutdownResources() {
+            synchronized (LOCK) {
+                stringRedisTemplateMap.values().forEach(template -> destroyConnectionFactory(template.getConnectionFactory()));
+                stringRedisTemplateMap.clear();
+            }
         }
     },
     // string redis
@@ -157,6 +184,14 @@ public enum CacheFactory {
             }
             return  stringRedisTemplateMap.get(database);
         }
+
+        @Override
+        public void shutdownResources() {
+            synchronized (LOCK) {
+                stringRedisTemplateMap.values().forEach(template -> destroyConnectionFactory(template.getConnectionFactory()));
+                stringRedisTemplateMap.clear();
+            }
+        }
     },
     // reactive redisson 响应式 redisson
     REACTIVE_REDISSON {
@@ -189,6 +224,20 @@ public enum CacheFactory {
         @Override
         public RedissonReactiveClient instance(RedisProperties ...redisProperties) {
             return instance(resolveDefaultDatabase(existRedisProperties, redisProperties), redisProperties);
+        }
+
+        @Override
+        public void shutdownResources() {
+            synchronized (LOCK) {
+                reactiveRedissonClientMap.values().forEach(client -> {
+                    try {
+                        client.shutdown();
+                    } catch (Exception e) {
+                        log.warn("关闭 Reactive Redisson 失败", e);
+                    }
+                });
+                reactiveRedissonClientMap.clear();
+            }
         }
     },
 
@@ -224,13 +273,54 @@ public enum CacheFactory {
         public RedissonClient instance(RedisProperties ...redisProperties) {
             return instance(resolveDefaultDatabase(existRedisProperties, redisProperties), redisProperties);
         }
+
+        @Override
+        public void shutdownResources() {
+            synchronized (LOCK) {
+                redissonClientMap.values().forEach(client -> {
+                    try {
+                        client.shutdown();
+                    } catch (Exception e) {
+                        log.warn("关闭 Redisson 失败", e);
+                    }
+                });
+                redissonClientMap.clear();
+            }
+        }
     };
 
+
+    private static final Logger log = LoggerFactory.getLogger(CacheFactory.class);
+
+    /**
+     * 关闭 Lettuce 与 Redisson。须在业务线程停止之后调用。
+     */
+    public static void shutdownAll() {
+        for (CacheFactory factory : values()) {
+            try {
+                factory.shutdownResources();
+            } catch (Exception e) {
+                log.warn("关闭 Redis 客户端失败 {}", factory.name(), e);
+            }
+        }
+    }
+
+    private static void destroyConnectionFactory(Object factory) {
+        if (factory instanceof LettuceConnectionFactory lettuce) {
+            try {
+                lettuce.destroy();
+            } catch (Exception e) {
+                log.warn("关闭 Lettuce 连接工厂失败", e);
+            }
+        }
+    }
 
     /**
      * @Author fzx
      * @Description 获取指定库号的实例；显式库号优先于 YAML database。
      */
+    public abstract void shutdownResources();
+
     public abstract <T> T instance(int database, RedisProperties ...redisProperties);
 
     /**

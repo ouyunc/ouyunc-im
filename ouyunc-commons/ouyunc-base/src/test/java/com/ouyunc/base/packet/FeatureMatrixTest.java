@@ -14,7 +14,6 @@ import com.ouyunc.base.packet.message.content.MessageContents;
 import com.ouyunc.base.utils.IdentityUtil;
 import com.ouyunc.base.utils.ImRouteCodec;
 import com.ouyunc.base.utils.LoginSignatureUtil;
-import com.ouyunc.base.utils.MD5Util;
 import com.ouyunc.base.utils.PacketReaderWriterUtil;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
@@ -76,7 +75,7 @@ class FeatureMatrixTest {
         String identity = "user:100";
         String secret = "sec";
         assertTrue(LoginSignatureUtil.isCreateTimeValid(now, now));
-        String sign = MD5Util.md5(LoginSignatureUtil.buildRaw(appKey, identity, now, secret));
+        String sign = LoginSignatureUtil.sign(appKey, identity, now, secret);
 
         LoginContent login = new LoginContent();
         login.setAppKey(appKey);
@@ -96,7 +95,7 @@ class FeatureMatrixTest {
         Packet decoded = writeThenRead(packet(MessageTypeEnum.LOGIN.getType(), message));
         LoginContent back = (LoginContent) MessageContents.parse(decoded.getMessage());
         assertEquals(sign, back.getSignature());
-        assertEquals(sign, MD5Util.md5(LoginSignatureUtil.buildRaw(back.getAppKey(), back.getIdentity(), back.getCreateTime(), secret)));
+        assertEquals(sign, LoginSignatureUtil.sign(back.getAppKey(), back.getIdentity(), back.getCreateTime(), secret));
 
         String combo = IdentityUtil.generalComboIdentity(back.getAppKey(), back.getIdentity(), NumberConstant.NUMBER_1);
         assertEquals(identity, IdentityUtil.revertIdentity(combo));

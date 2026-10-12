@@ -37,6 +37,7 @@ public enum MongodbFactory {
 
         // mongodb 库名-操作模板 map
         private static final ConcurrentHashMap<String, MongoTemplate> mongoTemplateMap = new ConcurrentHashMap<>();
+        private static final ConcurrentHashMap<String, MongoClient> mongoClients = new ConcurrentHashMap<>();
 
         @Override
         void useDefaultDatabase(String databaseName) {
@@ -80,6 +81,10 @@ public enum MongodbFactory {
             // 创建MongoDB客户端配置
             MongoClientSettings settings = createMongoClientSettings();
             MongoClient mongoClient = MongoClients.create(settings);
+            MongoClient replaced = mongoClients.put(databaseName, mongoClient);
+            if (replaced != null) {
+                replaced.close();
+            }
             // 创建自定义转换器
             MongoDatabaseFactory mongoDatabaseFactory = new SimpleMongoClientDatabaseFactory(mongoClient, databaseName);
             MappingMongoConverter converter = createMongoConverter(mongoDatabaseFactory);
@@ -163,6 +168,19 @@ public enum MongodbFactory {
             return converter;
         }
 
+        @Override
+        void closeClients() {
+            mongoTemplateMap.clear();
+            for (MongoClient client : mongoClients.values()) {
+                try {
+                    client.close();
+                } catch (Exception e) {
+                    log.warn("关闭 MongoClient 失败", e);
+                }
+            }
+            mongoClients.clear();
+        }
+
     },
 
     // 响应式mongodb v1.0操作模板
@@ -172,6 +190,8 @@ public enum MongodbFactory {
 
         // mongodb 库名-操作模板 map
         private static final ConcurrentHashMap<String, ReactiveMongoTemplate> mongoTemplateMap = new ConcurrentHashMap<>();
+        private static final ConcurrentHashMap<String, com.mongodb.reactivestreams.client.MongoClient> mongoClients =
+                new ConcurrentHashMap<>();
 
         @Override
         void useDefaultDatabase(String databaseName) {
@@ -214,7 +234,12 @@ public enum MongodbFactory {
         private ReactiveMongoTemplate createMongoTemplate(String databaseName) {
             // 创建MongoDB客户端配置
             MongoClientSettings settings = createMongoClientSettings();
-            com.mongodb.reactivestreams.client.MongoClient mongoClient = com.mongodb.reactivestreams.client.MongoClients.create(settings);
+            com.mongodb.reactivestreams.client.MongoClient mongoClient =
+                    com.mongodb.reactivestreams.client.MongoClients.create(settings);
+            com.mongodb.reactivestreams.client.MongoClient replaced = mongoClients.put(databaseName, mongoClient);
+            if (replaced != null) {
+                replaced.close();
+            }
             // 创建自定义转换器
             ReactiveMongoDatabaseFactory mongoDatabaseFactory = new SimpleReactiveMongoDatabaseFactory(mongoClient, databaseName);
             MappingMongoConverter converter = createMongoConverter(mongoDatabaseFactory);
@@ -293,6 +318,19 @@ public enum MongodbFactory {
 
             return converter;
         }
+
+        @Override
+        void closeClients() {
+            mongoTemplateMap.clear();
+            for (com.mongodb.reactivestreams.client.MongoClient client : mongoClients.values()) {
+                try {
+                    client.close();
+                } catch (Exception e) {
+                    log.warn("关闭 Reactive MongoClient 失败", e);
+                }
+            }
+            mongoClients.clear();
+        }
     };
 
 
@@ -340,7 +378,22 @@ public enum MongodbFactory {
         }
     }
 
+    /**
+     * 关闭已创建的 Mongo 客户端。进程退出时调用，避免连接残留到对端。
+     */
+    public static void shutdown() {
+        for (MongodbFactory factory : values()) {
+            try {
+                factory.closeClients();
+            } catch (Exception e) {
+                log.warn("关闭 Mongo 工厂失败 {}", factory.name(), e);
+            }
+        }
+    }
+
     abstract void useDefaultDatabase(String databaseName);
+
+    abstract void closeClients();
 
     public abstract<T> T instance();
 

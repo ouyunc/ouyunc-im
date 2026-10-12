@@ -20,6 +20,7 @@ import com.ouyunc.base.packet.message.Message;
 import com.ouyunc.base.utils.AppKeyUtil;
 import com.ouyunc.base.utils.IdentityUtil;
 import com.ouyunc.base.utils.TimeUtil;
+import com.ouyunc.core.context.MessageContext;
 import com.ouyunc.base.exception.ExternalDeliveryConfirmException;
 import com.ouyunc.message.context.MessageServerContext;
 import com.ouyunc.message.properties.MessageServerProperties;
@@ -372,7 +373,7 @@ public final class CsHelper {
         if (StringUtils.isBlank(ticketId)) {
             return;
         }
-        long expireMs = MessageConstant.CACHE_SESSION_LAST_MESSAGE_KEY_EXPIRE_TIMESTAMP;
+        long expireMs = MessageContext.messageHotDataTtlMillis();
         repository.saveLastMessageForCsTicket(ticketId.trim(), packet, expireMs, TimeUnit.MILLISECONDS);
     }
 

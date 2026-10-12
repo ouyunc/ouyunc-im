@@ -169,7 +169,7 @@ public final class GroupHttpPushDeliveryStrategy implements HttpProcessor {
         CommittedDelivery.run(packet, lease -> {
             // 派生索引失败时保留未完成状态，首次执行与重入使用相同的修复路径。
             DefaultRepository.INSTANCE.saveLastMessageForSession(packet.getMessage().getTo(), packet,
-                    MessageConstant.CACHE_SESSION_LAST_MESSAGE_KEY_EXPIRE_TIMESTAMP, TimeUnit.MILLISECONDS);
+                    MessageContext.messageHotDataTtlMillis(), TimeUnit.MILLISECONDS);
             SenderReadCompletionSupport.complete(packet, IdentityType.GROUP);
             pushGroupOnline(packet, lease);
         });

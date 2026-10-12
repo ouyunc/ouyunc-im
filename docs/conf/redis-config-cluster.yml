@@ -52,7 +52,7 @@ ouyunc:
           # 连接池最大连接数
           maxActive: 64
           # 连接池最大阻塞等待时间（使用负值表示没有限制）
-          maxWait: PT-0.001S
+          maxWait: PT0.5S
           # 连接池中的最大空闲连接
           maxIdle: 32
           # 连接池中的最小空闲连接
@@ -73,7 +73,7 @@ ouyunc:
         pool:
           enabled: true
           maxActive: 64
-          maxWait: PT-0.001S
+          maxWait: PT0.5S
           maxIdle: 32
           minIdle: 8
           timeBetweenEvictionRuns: PT30S

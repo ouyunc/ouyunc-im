@@ -69,6 +69,9 @@ public class CacheConstant {
     /** 身份路由 HASH */
     private static final String IM_ROUTE = "im:route";
 
+    /** 登录签名一次性 nonce，与路由同槽，避免跨槽多一次往返。 */
+    private static final String IM_LOGIN_NONCE = "im:login-nonce";
+
     /** 进程租约 */
     private static final String IM_NODE = "im:node";
 
@@ -442,6 +445,13 @@ public class CacheConstant {
      */
     public static String buildLoginRouteCacheKey(String appKey, String identity) {
         return OUYUNC + IM_ROUTE + COLON + withAggregateHashTag(appKey, identity);
+    }
+
+    /**
+     * 登录一次性 nonce。同一 createTime 在时钟窗口内只能消费一次，防止签名重放。
+     */
+    public static String buildLoginNonceCacheKey(String appKey, String identity, long createTime) {
+        return OUYUNC + IM_LOGIN_NONCE + COLON + withAggregateHashTag(appKey, identity) + COLON + createTime;
     }
 
     /**

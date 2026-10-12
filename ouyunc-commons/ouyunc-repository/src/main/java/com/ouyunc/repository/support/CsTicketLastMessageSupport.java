@@ -1,7 +1,7 @@
 package com.ouyunc.repository.support;
 
 import com.ouyunc.base.constant.CacheConstant;
-import com.ouyunc.base.constant.MessageConstant;
+import com.ouyunc.core.context.MessageContext;
 import com.ouyunc.base.constant.NumberConstant;
 import com.ouyunc.base.constant.enums.LuaScriptEnum;
 import com.ouyunc.base.constant.enums.MessageContentTypeEnum;
@@ -125,7 +125,7 @@ public final class CsTicketLastMessageSupport {
         Long result = stringRedisTemplate.execute(script, List.of(lmKey),
                 String.valueOf(expectedCurrent),
                 newId,
-                String.valueOf(MessageConstant.CACHE_SESSION_LAST_MESSAGE_KEY_EXPIRE_TIMESTAMP));
+                String.valueOf(MessageContext.messageHotDataTtlMillis()));
         if (result == null || result != 1L) {
             log.debug("ticket lm CAS 未命中 appKey={} ticketId={} expected={}", appKey, ticketId, expectedCurrent);
         }

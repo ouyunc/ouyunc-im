@@ -224,13 +224,19 @@ public enum JdbcFactory implements DbOperator {
     private static volatile HikariDataSource dataSource;
 
     /**
-     * 获取数据源
+     * 获取数据源。双重检查锁，避免并发首次访问建出多个 Hikari 池。
      */
     private static DataSource getDataSource() {
-        if (dataSource == null) {
-            dataSource = (HikariDataSource) createDataSource();
+        HikariDataSource existing = dataSource;
+        if (existing != null) {
+            return existing;
         }
-        return dataSource;
+        synchronized (JdbcFactory.class) {
+            if (dataSource == null) {
+                dataSource = (HikariDataSource) createDataSource();
+            }
+            return dataSource;
+        }
     }
 
     private static volatile JdbcProperties jdbcProperties;
@@ -310,11 +316,14 @@ public enum JdbcFactory implements DbOperator {
     }
 
     /**
-     * 关闭数据源
+     * 关闭 Hikari。与 {@link #getDataSource()} 共用同一把锁，避免关闭过程中又建出新池。
      */
-    private static void closeDataSource() {
-        if (dataSource != null && !dataSource.isClosed()) {
-            dataSource.close();
+    public static void shutdown() {
+        synchronized (JdbcFactory.class) {
+            if (dataSource != null && !dataSource.isClosed()) {
+                dataSource.close();
+            }
+            dataSource = null;
         }
     }
 

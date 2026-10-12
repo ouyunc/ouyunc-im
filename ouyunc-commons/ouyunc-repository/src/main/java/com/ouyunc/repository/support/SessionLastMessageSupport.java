@@ -1,7 +1,7 @@
 package com.ouyunc.repository.support;
 
 import com.ouyunc.base.constant.CacheConstant;
-import com.ouyunc.base.constant.MessageConstant;
+import com.ouyunc.core.context.MessageContext;
 import com.ouyunc.base.constant.enums.LuaScriptEnum;
 import com.ouyunc.base.constant.enums.MessageIndexScopeEnum;
 import com.ouyunc.base.packet.Packet;
@@ -107,7 +107,7 @@ public final class SessionLastMessageSupport {
         Long result = stringRedisTemplate.execute(script, List.of(lmKey),
                 String.valueOf(expectedCurrent),
                 newPacketIdOrEmpty == null ? "" : newPacketIdOrEmpty,
-                String.valueOf(MessageConstant.CACHE_SESSION_LAST_MESSAGE_KEY_EXPIRE_TIMESTAMP));
+                String.valueOf(MessageContext.messageHotDataTtlMillis()));
         return result != null && result == 1L;
     }
 

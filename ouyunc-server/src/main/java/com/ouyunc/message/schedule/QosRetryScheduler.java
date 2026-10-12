@@ -67,6 +67,9 @@ public final class QosRetryScheduler {
             new ConcurrentHashMap<>();
     private static final Semaphore RETRY_READ_SLOTS =
             new Semaphore(MessageConstant.QOS_RETRY_MAX_SHARED_READS);
+    /** 限制同时打到 Redis/发送路径的重试，池耗尽时让出连接给登录和热写。 */
+    private static final Semaphore RETRY_SEND_SLOTS =
+            new Semaphore(MessageConstant.QOS_RETRY_MAX_IN_FLIGHT);
     private static final java.util.concurrent.atomic.LongAdder READ_CAPACITY_REJECTED = new java.util.concurrent.atomic.LongAdder();
     private static final java.util.concurrent.atomic.LongAdder SHARED_READ_TIMEOUTS = new java.util.concurrent.atomic.LongAdder();
     private static final java.util.concurrent.atomic.LongAdder SHARED_READ_JOINED = new java.util.concurrent.atomic.LongAdder();
@@ -325,41 +328,49 @@ public final class QosRetryScheduler {
         if (!taskStillActive(taskId, taskWrapper)) {
             return;
         }
-        LoginClientInfo device = ClientHelper.onlineDevice(
-                retryContext.targetAppKey(), retryContext.targetIdentity(), retryContext.deviceType());
-        if (device == null) {
-            // 离线只跳过本轮，任务保留到 C2S 或达到最大次数
+        if (!RETRY_SEND_SLOTS.tryAcquire()) {
+            log.debug("QoS 重试并发已满，推迟本轮 taskId={}", taskId);
             return;
         }
-        if (!taskStillActive(taskId, taskWrapper)) {
-            return;
-        }
-        Packet schedulePackage = loadRetryPacket(retryContext);
-        if (schedulePackage == null) {
-            // 热正文暂时不可读时跳过本轮。取消任务会把后续重试也丢掉，恢复只能再靠历史补拉。
-            log.debug("QoS 重试正文暂不可用，使用有界推迟额度: taskId={}", taskId);
-            return;
-        }
-        if (!taskStillActive(taskId, taskWrapper)) {
-            return;
-        }
-        Packet retryPacket = schedulePackage.clone();
-        retryPacket.getMessage().ensureMetadata().ensureClusterRoute()
-                .setClusterForwardMode(ClusterForwardModeEnum.CLIENT);
-        retryPacket.getMessage().ensureMetadata().ensureClusterRoute().setFanoutTargets(null);
-        // 发送抛出异常同样消耗发送额度，避免故障时额外放大发送压力。
-        budget.sends++;
         try {
-            MessageSender.send(retryPacket, Target.newBuilder()
-                .appKey(device.getAppKey())
-                .targetIdentity(device.getIdentity())
-                .targetServerAddress(device.getLoginServerAddress())
-                .deviceType(device.getDeviceType())
-                .build());
-        } finally {
-            if (budget.sends >= budget.maxSends) {
-                taskWrapper.cancel();
+            LoginClientInfo device = ClientHelper.onlineDevice(
+                    retryContext.targetAppKey(), retryContext.targetIdentity(), retryContext.deviceType());
+            if (device == null) {
+                // 离线只跳过本轮，任务保留到 C2S 或达到最大次数
+                return;
             }
+            if (!taskStillActive(taskId, taskWrapper)) {
+                return;
+            }
+            Packet schedulePackage = loadRetryPacket(retryContext);
+            if (schedulePackage == null) {
+                // 热正文暂时不可读时跳过本轮。取消任务会把后续重试也丢掉，恢复只能再靠历史补拉。
+                log.debug("QoS 重试正文暂不可用，使用有界推迟额度: taskId={}", taskId);
+                return;
+            }
+            if (!taskStillActive(taskId, taskWrapper)) {
+                return;
+            }
+            Packet retryPacket = schedulePackage.clone();
+            retryPacket.getMessage().ensureMetadata().ensureClusterRoute()
+                    .setClusterForwardMode(ClusterForwardModeEnum.CLIENT);
+            retryPacket.getMessage().ensureMetadata().ensureClusterRoute().setFanoutTargets(null);
+            // 发送抛出异常同样消耗发送额度，避免故障时额外放大发送压力。
+            budget.sends++;
+            try {
+                MessageSender.send(retryPacket, Target.newBuilder()
+                        .appKey(device.getAppKey())
+                        .targetIdentity(device.getIdentity())
+                        .targetServerAddress(device.getLoginServerAddress())
+                        .deviceType(device.getDeviceType())
+                        .build());
+            } finally {
+                if (budget.sends >= budget.maxSends) {
+                    taskWrapper.cancel();
+                }
+            }
+        } finally {
+            RETRY_SEND_SLOTS.release();
         }
     }
 

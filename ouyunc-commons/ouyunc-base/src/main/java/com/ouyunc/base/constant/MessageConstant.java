@@ -181,8 +181,8 @@ public class MessageConstant {
     public static final int MAX_REF_COUNT = 5;
 
     /**
-     * 缓存最后一条会话消息 key / 会话 ZSet 过期时间，默认 30 天，单位毫秒。
-     * 消息正文热 key 由 {@code ouyunc.message.storage.hot-data-ttl-seconds} 配置（更短）。
+     * 未读计数、客服会话路由等派生索引的过期时间，默认 30 天，单位毫秒。
+     * 消息正文、会话 ZSet、最后一条消息不使用本常量，它们共用 hot-data TTL。
      */
     public static final long CACHE_SESSION_LAST_MESSAGE_KEY_EXPIRE_TIMESTAMP = NumberConstant.NUMBER_30 * MessageConstant.DAY_TIMESTAMP;
 
@@ -221,6 +221,13 @@ public class MessageConstant {
     public static final long HTTP_REQUEST_OVERHEAD_BYTES = 4096L;
     /** 只合并正在读取的同一消息；不缓存已完成结果，避免使用过期撤回状态。 */
     public static final int QOS_RETRY_MAX_SHARED_READS = 256;
+    /**
+     * 同时执行的 QoS 下行重试上限。Lettuce 池耗尽时重试若无限并发，会把登录和热写一起拖超时。
+     * 拿不到许可则跳过本轮，次数仍由定时器总轮数限制。
+     */
+    public static final int QOS_RETRY_MAX_IN_FLIGHT = 32;
+    /** Lettuce 借连接最长阻塞。配置为 0 或负数时回退到该值，禁止立即失败或无限等待。 */
+    public static final long REDIS_POOL_MAX_WAIT_MILLIS = 500L;
     public static final long QOS_RETRY_SHARED_READ_TIMEOUT_MS = 10_000L;
     /** 依赖状态只来自真实业务结果；无近期成功时明确 UNKNOWN，不主动打探测请求。 */
     public static final long MESSAGE_WRITE_HEALTH_FRESH_MS = 60_000L;
@@ -242,8 +249,11 @@ public class MessageConstant {
     public static final long CACHE_REQUEST_DELIVERY_EXPIRE_TIMESTAMP =
             CACHE_QOS_IDEM_CLIENT_EXPIRE_TIMESTAMP + HOUR_TIMESTAMP;
 
-    /** Redis 消息正文热数据默认保留时间，单位秒；配置非法或毫秒换算溢出时回退到该值。 */
-    public static final long CACHE_MESSAGE_HOT_DEFAULT_TTL_SECONDS = 7_200L;
+    /**
+     * Redis 消息正文、会话 ZSet、最后一条消息的默认保留时间，单位秒。默认 7 天。
+     * 配置非法或毫秒换算溢出时回退到该值。会话索引在每次写入时刷新 TTL，单条正文从写入时起算。
+     */
+    public static final long CACHE_MESSAGE_HOT_DEFAULT_TTL_SECONDS = 7L * 24 * 60 * 60;
 
     /** 落地节点 QoS ACK 校验证明本地缓存上限，防止高并发下行占用无界内存。 */
     public static final long QOS_ACK_PROOF_LOCAL_CACHE_MAX_SIZE = 200_000L;
@@ -488,14 +498,15 @@ public class MessageConstant {
     public static final String COLON = ":";
 
     /**
-     * 登录签名字段分隔符：{@code appKey & identity & createTime_appSecret}
+     * 登录签名原文分隔符：{@code appKey & identity & createTime}。appSecret 只作 HMAC 密钥，不进入原文。
      */
     public static final String LOGIN_SIGNATURE_FIELD_SEPARATOR = "&";
 
     /**
-     * 登录签名 createTime 允许的时钟偏差（毫秒），默认 ±5 分钟
+     * 登录 createTime 允许的时钟偏差，同时是一次性 nonce 的 Redis TTL。默认 ±60 秒。
+     * 窗口内同一 appKey+identity+createTime 只能成功登录一次。
      */
-    public static final long LOGIN_SIGNATURE_CREATE_TIME_SKEW_MS = 5L * 60L * 1000L;
+    public static final long LOGIN_SIGNATURE_CREATE_TIME_SKEW_MS = 60_000L;
 
     /**
      * 解绑抢锁失败时的重试次数，避免幽灵 ONLINE。

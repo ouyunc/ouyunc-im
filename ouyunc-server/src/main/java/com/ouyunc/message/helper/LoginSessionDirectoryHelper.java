@@ -34,7 +34,7 @@ public final class LoginSessionDirectoryHelper {
 
     /**
      * KEYS[1]=route；ARGV: deviceField, encoded, lastLoginTime。
-     * 路由末段 lastLoginTime 更大则拒绝覆盖，避免迟到的旧登录覆盖新会话。
+     * 路由末段 lastLoginTime 大于等于本次则拒绝覆盖，同毫秒后来者不能覆盖先写入的会话。
      */
     private static final byte[] BIND_LUA = (
             "local cur = redis.call('HGET', KEYS[1], ARGV[1]) "
@@ -46,7 +46,7 @@ public final class LoginSessionDirectoryHelper {
                     + "end "
                     + "if bars >= 2 then "
                     + "local existingTs = tonumber(string.match(cur, '(%d+)$')) "
-                    + "if existingTs and existingTs > ts then return 0 end "
+                    + "if existingTs and existingTs >= ts then return 0 end "
                     + "end "
                     + "end "
                     + "redis.call('HSET', KEYS[1], ARGV[1], ARGV[2]) "

@@ -615,9 +615,9 @@ public class AuthenticationHandler extends SimpleChannelInboundHandler<Packet> {
     /***
      * @author fzx
      * @description 校验登录信息；{@code scope} 必须为 {@link LoginScopeEnum} 已定义取值；
-     * identity 在客服 scope 下须在 {@code ouyunc_im_user} 存在且属于该 appKey；
-     * 签名为 {@code MD5(appKey&identity&createTime_appSecret)}，createTime 允许
-     * {@link MessageConstant#LOGIN_SIGNATURE_CREATE_TIME_SKEW_MS} 偏差。
+     * identity 须在 {@code ouyunc_im_user} 存在且属于该 appKey；
+     * 签名为 {@code HMAC-SHA256(appSecret, appKey&identity&createTime)}，createTime 在
+     * {@link MessageConstant#LOGIN_SIGNATURE_CREATE_TIME_SKEW_MS} 内且只能使用一次。
      */
     public boolean validate(LoginContent loginContent) {
         return LoginAuthValidator.verify(loginContent);

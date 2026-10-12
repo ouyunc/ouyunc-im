@@ -14,7 +14,7 @@ public class MessageProperties {
     private static final long MILLIS_PER_SECOND = 1_000L;
 
     /** 消息正文在 Redis 中的热数据保留时间，单位秒；默认 2 小时。 */
-    @Key(value = "ouyunc.message.storage.hot-data-ttl-seconds", defaultValue = "7200")
+    @Key(value = "ouyunc.message.storage.hot-data-ttl-seconds", defaultValue = "604800")
     private long hotDataTtlSeconds;
 
     /** HTTP 幂等窗口由仓储完成记录共同使用，避免投递证明早于入口幂等记录过期。 */

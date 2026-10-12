@@ -166,7 +166,7 @@ public final class GroupMessageBiProcessor extends AbstractMessageBiProcessor<By
     private void completeGroupDelivery(Packet packet) {
         CommittedDelivery.run(packet, lease -> {
             repository().saveLastMessageForSession(packet.getMessage().getTo(), packet,
-                    MessageConstant.CACHE_SESSION_LAST_MESSAGE_KEY_EXPIRE_TIMESTAMP, TimeUnit.MILLISECONDS);
+                    MessageContext.messageHotDataTtlMillis(), TimeUnit.MILLISECONDS);
             SenderReadCompletionSupport.complete(packet, IdentityType.GROUP);
             deliver(packet, lease);
         });

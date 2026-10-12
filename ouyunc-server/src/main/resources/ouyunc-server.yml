@@ -24,8 +24,9 @@ ouyunc:
       path: /configuration/test/ouyunc-server.yml
   message:
     storage:
-      # Redis 消息正文热数据 TTL，单位秒；过期后 packets 查询回源 Mongo/MySQL 并按该 TTL 回填。
-      hot-data-ttl-seconds: 7200
+      # 消息正文、会话 ZSet、最后一条消息共用的 TTL，单位秒。默认 7 天。
+      # 每次写会话会刷新 ZSet 和最后一条的过期时间；单条正文从写入时起算。过期后按 ID 回源 Mongo/MySQL 并按该 TTL 回填。
+      hot-data-ttl-seconds: 604800
     # 服务端口
     port: 6002
     # 服务名称

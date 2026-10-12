@@ -145,7 +145,7 @@ public final class One2OneMessageBiProcessor extends AbstractMessageBiProcessor<
         CommittedDelivery.run(packet, () -> {
             repository().saveLastMessageForSession(
                     IdentityUtil.sessionId(packet.getMessage().getFrom(), packet.getMessage().getTo()),
-                    packet, MessageConstant.CACHE_SESSION_LAST_MESSAGE_KEY_EXPIRE_TIMESTAMP, TimeUnit.MILLISECONDS);
+                    packet, MessageContext.messageHotDataTtlMillis(), TimeUnit.MILLISECONDS);
             SenderReadCompletionSupport.complete(packet, IdentityType.ONE_2_ONE);
             deliver(packet, false);
         });

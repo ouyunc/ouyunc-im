@@ -193,6 +193,21 @@ public class Encrypt {
             public boolean validate(String rawStr, String encodeStr) {
                 return encodeStr != null && encodeStr.equalsIgnoreCase(encrypt(rawStr));
             }
+        },
+
+        /**
+         * 登录签名算法。摘要必须带密钥，禁止走无密钥的 {@link #encrypt(String)}。
+         */
+        HMAC_SHA256((byte) 4, "HMAC-SHA256", "HMAC-SHA256 登录签名") {
+            @Override
+            public String encrypt(String rawStr) {
+                throw new UnsupportedOperationException("HMAC-SHA256 需要密钥，请使用 LoginSignatureUtil.sign");
+            }
+
+            @Override
+            public boolean validate(String rawStr, String encodeStr) {
+                return false;
+            }
         };
 
         private final byte value;

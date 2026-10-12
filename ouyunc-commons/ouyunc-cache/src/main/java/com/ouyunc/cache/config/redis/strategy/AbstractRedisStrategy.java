@@ -1,6 +1,7 @@
 package com.ouyunc.cache.config.redis.strategy;
 
 import com.google.common.collect.Lists;
+import com.ouyunc.base.constant.MessageConstant;
 import com.ouyunc.cache.config.redis.properties.RedisProperties;
 import io.lettuce.core.api.StatefulConnection;
 import io.lettuce.core.cluster.ClusterClientOptions;
@@ -73,7 +74,7 @@ public abstract class AbstractRedisStrategy implements RedisStrategy {
                 genericObjectPoolConfig.setMaxIdle(pool.getMaxIdle());
                 genericObjectPoolConfig.setMinIdle(pool.getMinIdle());
                 genericObjectPoolConfig.setMaxTotal(pool.getMaxActive());
-                genericObjectPoolConfig.setMaxWait(pool.getMaxWait());
+                genericObjectPoolConfig.setMaxWait(positiveMaxWait(pool.getMaxWait()));
             }
         }
         return genericObjectPoolConfig;
@@ -123,6 +124,16 @@ public abstract class AbstractRedisStrategy implements RedisStrategy {
             }
         }
         return nodes;
+    }
+
+    /**
+     * 借连接必须有限等待。0 或负数在池耗尽时会立即失败或无限阻塞，统一回退到 500ms。
+     */
+    private static Duration positiveMaxWait(Duration configured) {
+        if (configured == null || configured.isZero() || configured.isNegative()) {
+            return Duration.ofMillis(MessageConstant.REDIS_POOL_MAX_WAIT_MILLIS);
+        }
+        return configured;
     }
 
     /**
