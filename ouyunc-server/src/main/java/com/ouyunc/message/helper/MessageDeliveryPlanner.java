@@ -15,6 +15,7 @@ import com.ouyunc.base.exception.ExternalDeliveryConfirmException;
 import com.ouyunc.message.context.MessageServerContext;
 import com.ouyunc.message.schedule.QosRetryScheduler;
 import com.ouyunc.repository.DefaultRepository;
+import com.ouyunc.repository.support.GroupMembershipSupport;
 import org.apache.commons.collections4.CollectionUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -138,6 +139,37 @@ public final class MessageDeliveryPlanner {
         MessageDeliveryChannelEnum channel =
                 DefaultRepository.INSTANCE.resolveGroupMemberDeliveryChannel(appKey, groupId, memberId);
         routeToRecipient(packet, memberId, channel, "群聊");
+    }
+
+    /**
+     * 全员扇出：先确认名单扫描稳定，再按批投递。
+     * 投递前的名单未就绪会抛 {@link GroupMembershipSupport.GroupMembershipLoadException}，此时还没有推送。
+     */
+    public static void deliverGroupMembersByScan(Packet packet, Runnable beforeBatch) {
+        if (packet == null || packet.getMessage() == null || packet.getMessage().getMetadata() == null) {
+            throw new GroupMembershipSupport.GroupMembershipLoadException("群扇出缺少消息");
+        }
+        Message message = packet.getMessage();
+        String appKey = message.getMetadata().getIngress().getAppKey();
+        String sender = message.getFrom();
+        Runnable renew = beforeBatch == null ? () -> { } : beforeBatch;
+        DefaultRepository.INSTANCE.forEachGroupMemberBatch(
+                appKey,
+                message.getTo(),
+                MessageConstant.GROUP_FANOUT_ONLINE_LOOKUP_BATCH,
+                members -> {
+                    Set<String> batch = new HashSet<>(members.size());
+                    for (String member : members) {
+                        if (member != null && !member.equals(sender)) {
+                            batch.add(member);
+                        }
+                    }
+                    if (batch.isEmpty()) {
+                        return;
+                    }
+                    renew.run();
+                    deliverGroupBatch(packet, batch, renew);
+                });
     }
 
     /**

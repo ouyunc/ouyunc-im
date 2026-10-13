@@ -2,10 +2,11 @@ package com.ouyunc.message.context;
 
 import com.github.benmanes.caffeine.cache.CacheLoader;
 import com.github.benmanes.caffeine.cache.Caffeine;
+import com.github.benmanes.caffeine.cache.RemovalCause;
 import com.google.common.collect.Sets;
+import com.ouyunc.base.constant.MessageConstant;
 import com.ouyunc.base.constant.enums.LuaScriptEnum;
 import com.ouyunc.base.exception.MessageException;
-import com.ouyunc.base.model.LoginClientInfo;
 import com.ouyunc.base.packet.Packet;
 import com.ouyunc.cache.Cache;
 import com.ouyunc.cache.local.caffeine.CaffeineLocalCache;
@@ -13,6 +14,7 @@ import com.ouyunc.core.context.MessageContext;
 import com.ouyunc.core.intercept.AbstractMessageInterceptor;
 import com.ouyunc.message.MessageServer;
 import com.ouyunc.message.cluster.lease.SessionNodeState;
+import com.ouyunc.message.cluster.topology.ClusterTopologyView;
 import com.ouyunc.message.convert.PacketConverter;
 import com.ouyunc.message.dispatcher.ProtocolDispatcherBiProcessor;
 import com.ouyunc.message.processor.AbstractBaseBiProcessor;
@@ -20,7 +22,6 @@ import com.ouyunc.message.processor.AbstractMessageBiProcessor;
 import com.ouyunc.message.properties.MessageServerProperties;
 import com.ouyunc.message.protocol.NativePacketProtocol;
 import com.ouyunc.message.protocol.PacketProtocol;
-import com.ouyunc.message.cluster.topology.ClusterTopologyView;
 import com.ouyunc.message.router.BacktrackMessageRouter;
 import com.ouyunc.message.router.Router;
 import io.netty.channel.Channel;
@@ -87,7 +88,16 @@ public class MessageServerContext extends MessageContext {
      * 外部（本地）用户的通道channel缓存，该缓存中不包含集群中的内置客户端的channel, 这里的key 可以是手机号/身份证/token 等唯一标识用户的字段
      */
     public static Cache<String, ChannelHandlerContext> localLoginClientRegisterTable = CaffeineLocalCache.wrap(
-            "clientLocalRegisterTable", Caffeine.newBuilder().<String, ChannelHandlerContext>build());
+            "clientLocalRegisterTable",
+            Caffeine.<String, ChannelHandlerContext>newBuilder()
+                    .maximumSize(MessageConstant.LOCAL_LOGIN_CLIENT_REGISTER_MAX_SIZE)
+                    .removalListener((String key, ChannelHandlerContext ctx, RemovalCause cause) -> {
+                        if (cause == RemovalCause.SIZE) {
+                            log.error("本机登录连接表达到 {} 被淘汰 key={}",
+                                    MessageConstant.LOCAL_LOGIN_CLIENT_REGISTER_MAX_SIZE, key);
+                        }
+                    })
+                    .build());
 
 
 

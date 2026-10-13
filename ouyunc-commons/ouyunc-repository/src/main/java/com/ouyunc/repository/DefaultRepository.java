@@ -142,6 +142,14 @@ public enum DefaultRepository implements Repository {
         return RepositorySupports.GROUP.groupUsersIdentity(packet);
     }
 
+    /**
+     * 群成员分批扫描。人数或名单未就绪抛 {@link com.ouyunc.repository.support.GroupMembershipSupport.GroupMembershipLoadException}。
+     */
+    public void forEachGroupMemberBatch(String appKey, String groupId, int batchSize,
+                                        Consumer<List<String>> consumer) {
+        RepositorySupports.GROUP.forEachGroupMemberBatch(appKey, groupId, batchSize, consumer);
+    }
+
     /** 少量成员是否在群；不触发完整名单回源。 */
     public Set<String> presentInGroup(String appKey, String groupId, Collection<String> memberIds) {
         return RepositorySupports.GROUP.presentInGroup(appKey, groupId, memberIds);

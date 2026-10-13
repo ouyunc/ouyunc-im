@@ -156,6 +156,91 @@ public final class GroupMembershipSupport {
     }
 
     /**
+     * 按 ZSCAN 一批回调一批。先空扫确认名单版本稳定，再投递，避免已经推给部分成员后又因版本变化整群重推。
+     * ZSCAN 允许重复返回同一成员，投递阶段用已见集合去掉重复，不把整份名单再复制给调用方。
+     */
+    public void forEachGroupMemberBatch(String appKey, String groupId, int batchSize, Consumer<List<String>> consumer) {
+        if (StringUtils.isAnyBlank(appKey, groupId) || consumer == null) {
+            throw new GroupMembershipLoadException("群成员分批扫描参数不完整");
+        }
+        int size = batchSize > 0 ? batchSize : MessageConstant.GROUP_FANOUT_ONLINE_LOOKUP_BATCH;
+        ensureGroupMemberRoster(appKey, groupId);
+        if (!hasGroupMemberInit(appKey, groupId)) {
+            throw new GroupMembershipLoadException(
+                    "群成员名单未完成权威重建, appKey=" + appKey + ", groupId=" + groupId);
+        }
+        String cacheKey = CacheConstant.buildGroupUserCacheKey(appKey, groupId);
+        String versionBefore = currentRelationVersion(appKey, groupId);
+        scanGroupMembers(cacheKey, size, null);
+        assertRosterUnchanged(appKey, groupId, versionBefore);
+        Set<String> seen = new HashSet<>();
+        scanGroupMembers(cacheKey, size, batch -> {
+            List<String> fresh = new ArrayList<>(batch.size());
+            for (String memberId : batch) {
+                if (memberId != null && seen.add(memberId)) {
+                    fresh.add(memberId);
+                }
+            }
+            if (!fresh.isEmpty()) {
+                consumer.accept(List.copyOf(fresh));
+            }
+        });
+    }
+
+    /** 投递开始前核对 INIT 与关系版本。变化时还没有推送，调用方可以安全重试。 */
+    private void assertRosterUnchanged(String appKey, String groupId, String versionBefore) {
+        if (!hasGroupMemberInit(appKey, groupId)
+                || !StringUtils.equals(versionBefore, currentRelationVersion(appKey, groupId))) {
+            throw new GroupMembershipLoadException(
+                    "群成员名单在扫描期间发生变更, appKey=" + appKey + ", groupId=" + groupId);
+        }
+    }
+
+    /**
+     * {@code consumer} 为空时只走完游标，不保留成员。
+     * 回调抛出的运行时异常原样抛出，避免把外渠确认失败包成名单加载失败。
+     */
+    private void scanGroupMembers(String cacheKey, int size, Consumer<List<String>> consumer) {
+        List<String> batch = new ArrayList<>(size);
+        boolean delivering = false;
+        ScanOptions options = ScanOptions.scanOptions()
+                .count(MessageConstant.GROUP_MEMBER_ZSET_SCAN_COUNT)
+                .build();
+        try (Cursor<ZSetOperations.TypedTuple<String>> cursor =
+                     infra.stringRedisTemplate.opsForZSet().scan(cacheKey, options)) {
+            if (cursor == null) {
+                throw new GroupMembershipLoadException("群成员 ZSCAN 未返回游标, cacheKey=" + cacheKey);
+            }
+            while (cursor.hasNext()) {
+                ZSetOperations.TypedTuple<String> tuple = cursor.next();
+                if (tuple != null && tuple.getValue() != null) {
+                    batch.add(tuple.getValue());
+                }
+                if (batch.size() >= size) {
+                    delivering = consumer != null;
+                    if (consumer != null) {
+                        consumer.accept(List.copyOf(batch));
+                    }
+                    delivering = false;
+                    batch.clear();
+                }
+            }
+        } catch (GroupMembershipLoadException error) {
+            throw error;
+        } catch (RuntimeException error) {
+            if (delivering) {
+                throw error;
+            }
+            throw new GroupMembershipLoadException("群成员 ZSCAN 失败, cacheKey=" + cacheKey, error);
+        } catch (Exception error) {
+            throw new GroupMembershipLoadException("群成员 ZSCAN 失败, cacheKey=" + cacheKey, error);
+        }
+        if (!batch.isEmpty() && consumer != null) {
+            consumer.accept(List.copyOf(batch));
+        }
+    }
+
+    /**
      * 大群成员用 ZSCAN 分段拉取，避免一次 ZRANGE 0 -1 堵 Redis/堆。
      */
     private Set<String> loadGroupUserIdsByScan(String cacheKey) {
@@ -261,7 +346,11 @@ public final class GroupMembershipSupport {
         if (hasGroupMemberInit(appKey, groupId)) {
             Long zcard = infra.stringRedisTemplate.opsForZSet().zCard(
                     CacheConstant.buildGroupUserCacheKey(appKey, groupId));
-            return zcard == null ? 0L : zcard;
+            if (zcard == null) {
+                throw new GroupMembershipLoadException(
+                        "群成员人数未知, appKey=" + appKey + ", groupId=" + groupId);
+            }
+            return zcard;
         }
         return countFromDb(JdbcSqlDialectHolder.countGroupUsersByGroup(),
                 GroupUserEntity.Fields.groupId, groupId, appKey);
@@ -271,12 +360,19 @@ public final class GroupMembershipSupport {
         if (hasUserGroupsInit(appKey, userId)) {
             Long zcard = infra.stringRedisTemplate.opsForZSet().zCard(
                     CacheConstant.buildUserGroupsCacheKey(appKey, userId));
-            return zcard == null ? 0L : zcard;
+            if (zcard == null) {
+                throw new GroupMembershipLoadException(
+                        "用户加群人数未知, appKey=" + appKey + ", userId=" + userId);
+            }
+            return zcard;
         }
         return countFromDb(JdbcSqlDialectHolder.countGroupsByUser(),
                 GroupUserEntity.Fields.userId, userId, appKey);
     }
 
+    /**
+     * 统计失败必须抛错。返回 0 会被 PULL_PUSH 当成小群走全员推。
+     */
     private long countFromDb(String sql, String paramName, String paramValue, String appKey) {
         try {
             Long count = infra.jdbcClient.sql(sql)
@@ -285,10 +381,17 @@ public final class GroupMembershipSupport {
                     .query(Long.class)
                     .optional()
                     .orElse(0L);
-            return count == null ? 0L : count;
+            if (count == null) {
+                throw new GroupMembershipLoadException(
+                        "统计群/成员数量结果为空 param=" + paramName + " value=" + paramValue);
+            }
+            return count;
+        } catch (GroupMembershipLoadException error) {
+            throw error;
         } catch (Exception e) {
             log.error("统计群/成员数量失败 param={} value={} appKey={}", paramName, paramValue, appKey, e);
-            return 0L;
+            throw new GroupMembershipLoadException(
+                    "统计群/成员数量失败 param=" + paramName + " value=" + paramValue, e);
         }
     }
 
@@ -1084,9 +1187,17 @@ public final class GroupMembershipSupport {
             log.error("群成员名单未就绪，拒绝带容量入群 appKey={} groupId={}", appKey, groupId);
             return BindGroupEnum.FAILED;
         }
-        if (maxPerUser >= 0 && !hasUserGroupsInit(appKey, joiner)
-                && userGroupCount(appKey, joiner) >= maxPerUser) {
-            return BindGroupEnum.USER_GROUP_LIMIT;
+        if (maxPerUser >= 0 && !hasUserGroupsInit(appKey, joiner)) {
+            long owned;
+            try {
+                owned = userGroupCount(appKey, joiner);
+            } catch (GroupMembershipLoadException error) {
+                log.error("入群前统计用户加群数失败 appKey={} userId={}", appKey, joiner, error);
+                return BindGroupEnum.FAILED;
+            }
+            if (owned >= maxPerUser) {
+                return BindGroupEnum.USER_GROUP_LIMIT;
+            }
         }
 
         String owner = java.util.UUID.randomUUID().toString();

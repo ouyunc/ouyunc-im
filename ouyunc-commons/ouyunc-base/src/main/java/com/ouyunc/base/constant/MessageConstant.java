@@ -267,6 +267,12 @@ public class MessageConstant {
     public static final long LOGIN_ROUTE_LOCAL_CACHE_MAX_SIZE = 200_000L;
 
     /**
+     * 本机已登录连接表上限。单进程按一百万连接封顶，超出后 Caffeine 按容量淘汰并打错误日志。
+     * 淘汰只丢掉本地 Channel 索引，不会主动关连接；线上应在到达上限前扩容节点。
+     */
+    public static final long LOCAL_LOGIN_CLIENT_REGISTER_MAX_SIZE = 1_000_000L;
+
+    /**
      * 登录路由本地缓存 TTL，单位毫秒。
      * 短 TTL 用于合并连续消息产生的 HGET/HGETALL，同时限制跨节点重登后的旧路由窗口。
      */

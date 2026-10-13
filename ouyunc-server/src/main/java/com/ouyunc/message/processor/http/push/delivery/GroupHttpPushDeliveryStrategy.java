@@ -177,7 +177,7 @@ public final class GroupHttpPushDeliveryStrategy implements HttpProcessor {
 
     private static void deliverWithdraw(Packet packet) {
         HttpPushDeliverySupport.syncSenderOnlineDevices(packet, packet.getMessage().getFrom());
-        MessageDeliveryPlanner.deliverGroupMembers(packet, loadFullMembersOrEmpty(packet));
+        MessageDeliveryPlanner.deliverGroupMembersByScan(packet, () -> { });
     }
 
     private static void pushGroupOnline(Packet packet, CommittedDelivery.DeliveryLease lease) {
@@ -186,7 +186,7 @@ public final class GroupHttpPushDeliveryStrategy implements HttpProcessor {
         GroupMessagePushModeEnum mode = GroupMessagePushModeEnum.orDefault(
                 MessageServerContext.serverProperties().getGroupMessagePushMode());
         if (GroupMessagePushModeEnum.PUSH.equals(mode)) {
-            deliverToAllGroupMembers(packet, loadFullMembersOrEmpty(packet), lease);
+            MessageDeliveryPlanner.deliverGroupMembersByScan(packet, lease::renew);
             return;
         }
         if (GroupMessagePushModeEnum.PULL.equals(mode)) {
@@ -194,25 +194,17 @@ public final class GroupHttpPushDeliveryStrategy implements HttpProcessor {
             return;
         }
         if (GroupMessagePushModeEnum.PULL_PUSH.equals(mode)) {
+            // 人数未知抛错，不走全员推。CommittedDelivery 看到异常后不写完成标记。
             long memberCount = DefaultRepository.INSTANCE.groupMemberCount(
                     message.getMetadata().getIngress().getAppKey(), message.getTo());
             if (memberCount > MessageServerContext.serverProperties().getGroupMessageThreshold()) {
                 deliverAtMentionsIfAny(packet, lease);
             } else {
-                deliverToAllGroupMembers(packet, loadFullMembersOrEmpty(packet), lease);
+                MessageDeliveryPlanner.deliverGroupMembersByScan(packet, lease::renew);
             }
             return;
         }
         log.warn("HTTP 推送暂不支持群消息推送模式: {}", mode);
-    }
-
-    private static void deliverToAllGroupMembers(Packet packet, Set<String> groupMembers) {
-        MessageDeliveryPlanner.deliverGroupMembers(packet, groupMembers);
-    }
-
-    private static void deliverToAllGroupMembers(Packet packet, Set<String> groupMembers,
-                                                 CommittedDelivery.DeliveryLease lease) {
-        MessageDeliveryPlanner.deliverGroupMembers(packet, groupMembers, lease::renew);
     }
 
     private static void deliverAtMentionsIfAny(Packet packet) {
@@ -221,7 +213,7 @@ public final class GroupHttpPushDeliveryStrategy implements HttpProcessor {
             return;
         }
         if (MessageContentNormalizer.containsAtAll(atList)) {
-            deliverToAllGroupMembers(packet, loadFullMembersOrEmpty(packet));
+            MessageDeliveryPlanner.deliverGroupMembersByScan(packet, () -> { });
             return;
         }
         MessageDeliveryPlanner.deliverGroupMembers(packet, new HashSet<>(atList));
@@ -233,21 +225,10 @@ public final class GroupHttpPushDeliveryStrategy implements HttpProcessor {
             return;
         }
         if (MessageContentNormalizer.containsAtAll(atList)) {
-            deliverToAllGroupMembers(packet, loadFullMembersOrEmpty(packet), lease);
+            MessageDeliveryPlanner.deliverGroupMembersByScan(packet, lease::renew);
             return;
         }
         MessageDeliveryPlanner.deliverGroupMembers(packet, new HashSet<>(atList), lease::renew);
-    }
-
-    private static Set<String> loadFullMembersOrEmpty(Packet packet) {
-        try {
-            Set<String> members = DefaultRepository.INSTANCE.groupUsersIdentity(packet);
-            return members == null ? Set.of() : members;
-        } catch (GroupMembershipSupport.GroupMembershipLoadException e) {
-            log.error("HTTP 枚举群成员失败 group={} packetId={}",
-                    packet.getMessage().getTo(), packet.getPacketId(), e);
-            throw e;
-        }
     }
 
     private static void requireValidGroupAt(Packet packet, String appKey, String groupId)

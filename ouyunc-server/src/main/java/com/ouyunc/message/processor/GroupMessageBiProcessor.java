@@ -257,7 +257,14 @@ public final class GroupMessageBiProcessor extends AbstractMessageBiProcessor<By
      */
     private void deliverWithdrawMessage(Packet packet) {
         deliver2Self(packet);
-        deliver2AllGroupMembers(packet, loadFullMembersOrEmpty(packet));
+        try {
+            deliverAllMembersByScan(packet);
+        } catch (GroupMembershipSupport.GroupMembershipLoadException e) {
+            log.error("撤回枚举群成员失败, groupId={} packetId={}",
+                    packet.getMessage().getTo(), packet.getPacketId(), e);
+            scheduleFanoutRecovery(packet);
+            throw e;
+        }
     }
 
     private void deliver(Packet packet, CommittedDelivery.DeliveryLease lease) {
@@ -281,7 +288,7 @@ public final class GroupMessageBiProcessor extends AbstractMessageBiProcessor<By
         GroupMessagePushModeEnum mode = GroupMessagePushModeEnum.orDefault(
                 MessageServerContext.serverProperties().getGroupMessagePushMode());
         if (GroupMessagePushModeEnum.PUSH.equals(mode)) {
-            deliver2AllGroupMembers(packet, loadFullMembersOrEmpty(packet), lease);
+            deliverAllMembersByScan(packet, lease);
             return;
         }
         if (GroupMessagePushModeEnum.PULL.equals(mode)) {
@@ -289,11 +296,12 @@ public final class GroupMessageBiProcessor extends AbstractMessageBiProcessor<By
             return;
         }
         if (GroupMessagePushModeEnum.PULL_PUSH.equals(mode)) {
+            // 人数未知时 groupMemberCount 抛错，禁止当成小群全员推；外层补投接手。
             long memberCount = repository().groupMemberCount(appKey, message.getTo());
             if (memberCount > MessageServerContext.serverProperties().getGroupMessageThreshold()) {
                 deliverAtMentionsIfAny(packet, lease);
             } else {
-                deliver2AllGroupMembers(packet, loadFullMembersOrEmpty(packet), lease);
+                deliverAllMembersByScan(packet, lease);
             }
             return;
         }
@@ -325,13 +333,13 @@ public final class GroupMessageBiProcessor extends AbstractMessageBiProcessor<By
 
 
 
-    private void deliver2AllGroupMembers(Packet packet, Set<String> groupMembers) {
-        MessageDeliveryPlanner.deliverGroupMembers(packet, groupMembers);
+    /** 全员扇出按扫描批次投递，不先物化整群名单。 */
+    private void deliverAllMembersByScan(Packet packet) {
+        MessageDeliveryPlanner.deliverGroupMembersByScan(packet, () -> { });
     }
 
-    private void deliver2AllGroupMembers(Packet packet, Set<String> groupMembers,
-                                         CommittedDelivery.DeliveryLease lease) {
-        MessageDeliveryPlanner.deliverGroupMembers(packet, groupMembers, lease::renew);
+    private void deliverAllMembersByScan(Packet packet, CommittedDelivery.DeliveryLease lease) {
+        MessageDeliveryPlanner.deliverGroupMembersByScan(packet, lease::renew);
     }
 
     private void deliverAtMentionsIfAny(Packet packet) {
@@ -340,7 +348,7 @@ public final class GroupMessageBiProcessor extends AbstractMessageBiProcessor<By
             return;
         }
         if (MessageContentNormalizer.containsAtAll(atList)) {
-            deliver2AllGroupMembers(packet, loadFullMembersOrEmpty(packet));
+            deliverAllMembersByScan(packet);
             return;
         }
         MessageDeliveryPlanner.deliverGroupMembers(packet, new HashSet<>(atList));
@@ -352,24 +360,10 @@ public final class GroupMessageBiProcessor extends AbstractMessageBiProcessor<By
             return;
         }
         if (MessageContentNormalizer.containsAtAll(atList)) {
-            deliver2AllGroupMembers(packet, loadFullMembersOrEmpty(packet), lease);
+            deliverAllMembersByScan(packet, lease);
             return;
         }
         MessageDeliveryPlanner.deliverGroupMembers(packet, new HashSet<>(atList), lease::renew);
-    }
-
-    private Set<String> loadFullMembersOrEmpty(Packet packet) {
-        try {
-            Set<String> members = repository().groupUsersIdentity(packet);
-            return members == null ? Set.of() : members;
-        } catch (GroupMembershipSupport.GroupMembershipLoadException e) {
-            log.error("枚举群成员失败, groupId={} packetId={}",
-                    packet.getMessage().getTo(), packet.getPacketId(), e);
-            scheduleFanoutRecovery(packet);
-            // 不能把“成员尚未加载出来”当作空群并把 delivery-done 写成完成。
-            // 抛出后会释放本次 owner，客户端重试和本机有界恢复任务均可继续补投。
-            throw e;
-        }
     }
 
     /**
