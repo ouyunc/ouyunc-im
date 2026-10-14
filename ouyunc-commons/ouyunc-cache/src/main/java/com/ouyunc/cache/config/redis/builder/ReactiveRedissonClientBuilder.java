@@ -5,6 +5,7 @@ import com.ouyunc.cache.config.constant.ModeEnum;
 import com.ouyunc.cache.config.redis.strategy.RedisStrategy;
 import org.redisson.Redisson;
 import org.redisson.api.RedissonReactiveClient;
+import org.redisson.codec.Kryo5Codec;
 import org.redisson.config.Config;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -25,6 +26,8 @@ public class ReactiveRedissonClientBuilder extends AbstractRedisBuilder<Redisson
     public RedissonReactiveClient build(int database) {
         RedisStrategy redissonStrategy = currentRedissonStrategy();
         Config config = redissonStrategy.buildRedissonConfig(database, properties());
+        // 与同步客户端一致，显式使用 Kryo5，不用 JDK SerializationCodec。
+        config.setCodec(new Kryo5Codec());
         return Redisson.create(config).reactive();
     }
 

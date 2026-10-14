@@ -63,12 +63,15 @@ public class ReactiveRedisTemplateBuilder extends AbstractRedisBuilder<ReactiveR
             // 设置序列化
             GenericJackson2JsonRedisSerializer jackson2JsonRedisSerializer = new GenericJackson2JsonRedisSerializer(objectMapper);
             StringRedisSerializer stringRedisSerializer = new StringRedisSerializer();
+            // newSerializationContext() 无参时默认是 RedisSerializer.java()（JDK 序列化）。
+            // 这里把默认和 string 槽都指定成字符串，未单独设置的槽位也不会回退到 JDK。
             return new ReactiveRedisTemplate<>(lettuceConnectionFactory, RedisSerializationContext
-                    .<String, Object>newSerializationContext()
+                    .<String, Object>newSerializationContext(stringRedisSerializer)
                     .key(stringRedisSerializer)
                     .value(jackson2JsonRedisSerializer)
                     .hashKey(stringRedisSerializer)
                     .hashValue(jackson2JsonRedisSerializer)
+                    .string(stringRedisSerializer)
                     .build());
         }else {
             logger.error("请使用LettuceConnectionFactory 来构建响应式ReactiveRedisTemplate!");

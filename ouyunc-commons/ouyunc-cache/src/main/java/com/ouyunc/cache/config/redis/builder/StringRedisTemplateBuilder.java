@@ -33,10 +33,12 @@ public class StringRedisTemplateBuilder extends AbstractRedisBuilder<StringRedis
         stringRedisTemplate.setConnectionFactory(lettuceConnectionFactory);
         //使用jackson序列化
         StringRedisSerializer stringRedisSerializer = new StringRedisSerializer();
+        // 避免 afterPropertiesSet 把默认序列化器回退成 JDK 序列化
+        stringRedisTemplate.setDefaultSerializer(stringRedisSerializer);
         //key和hashKey使用String序列化
         stringRedisTemplate.setKeySerializer(stringRedisSerializer);
         stringRedisTemplate.setHashKeySerializer(stringRedisSerializer);
-        //value和hashValue使用jackson的字符串序列化
+        //value和hashValue使用字符串序列化
         stringRedisTemplate.setValueSerializer(stringRedisSerializer);
         stringRedisTemplate.setHashValueSerializer(stringRedisSerializer);
         //模板初始化，不设置可能会抛出异常

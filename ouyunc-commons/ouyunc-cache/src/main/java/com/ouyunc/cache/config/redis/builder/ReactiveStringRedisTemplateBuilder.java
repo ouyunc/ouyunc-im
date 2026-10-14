@@ -37,12 +37,14 @@ public class ReactiveStringRedisTemplateBuilder extends AbstractRedisBuilder<Rea
         if (redisConnectionFactory instanceof LettuceConnectionFactory lettuceConnectionFactory) {
             // 设置序列化
             StringRedisSerializer stringRedisSerializer = new StringRedisSerializer();
+            // 无参 newSerializationContext() 的默认序列化器是 JDK 序列化，string 槽未设置时会用到它。
             return new ReactiveStringRedisTemplate(lettuceConnectionFactory, RedisSerializationContext
-                    .<String, String>newSerializationContext()
+                    .<String, String>newSerializationContext(stringRedisSerializer)
                     .key(stringRedisSerializer)
                     .value(stringRedisSerializer)
                     .hashKey(stringRedisSerializer)
                     .hashValue(stringRedisSerializer)
+                    .string(stringRedisSerializer)
                     .build());
         }else {
             logger.error("请使用LettuceConnectionFactory 来构建响应式ReactiveStringRedisTemplate!");

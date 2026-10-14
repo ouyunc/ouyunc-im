@@ -65,6 +65,9 @@ public class RedisTemplateBuilder extends AbstractRedisBuilder<RedisTemplate<?,?
         // 设置序列化, 如果需要使用redis 的原生字符串来操作，需要做字符串的转义，比如zset 的操作，对member进行排序，member的排序结果可能会有误
         GenericJackson2JsonRedisSerializer jackson2JsonRedisSerializer = new GenericJackson2JsonRedisSerializer(objectMapper);
         StringRedisSerializer stringRedisSerializer = new StringRedisSerializer();
+        // 必须显式指定默认序列化器。RedisTemplate.afterPropertiesSet 在 defaultSerializer 为空时
+        // 会装上 JdkSerializationRedisSerializer，key 会带 AC ED 00 05 前缀。
+        redisTemplate.setDefaultSerializer(jackson2JsonRedisSerializer);
         //key和hashKey使用String序列化
         redisTemplate.setKeySerializer(stringRedisSerializer);
         redisTemplate.setHashKeySerializer(stringRedisSerializer);

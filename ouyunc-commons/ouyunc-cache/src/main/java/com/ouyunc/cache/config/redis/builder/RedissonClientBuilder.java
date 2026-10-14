@@ -5,6 +5,7 @@ import com.ouyunc.cache.config.constant.ModeEnum;
 import com.ouyunc.cache.config.redis.strategy.RedisStrategy;
 import org.redisson.Redisson;
 import org.redisson.api.RedissonClient;
+import org.redisson.codec.Kryo5Codec;
 import org.redisson.config.Config;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -25,6 +26,9 @@ public class RedissonClientBuilder extends AbstractRedisBuilder<RedissonClient> 
     public RedissonClient build(int database) {
         RedisStrategy redissonStrategy = currentRedissonStrategy();
         Config config = redissonStrategy.buildRedissonConfig(database, properties());
+        // Redisson 4 默认已是 Kryo5。显式指定，避免落到 SerializationCodec（JDK 序列化）。
+        // key 仍是 UTF-8 明文，codec 只作用于 value。
+        config.setCodec(new Kryo5Codec());
         return Redisson.create(config);
     }
 
