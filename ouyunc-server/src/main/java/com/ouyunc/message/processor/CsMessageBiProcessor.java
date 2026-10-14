@@ -216,7 +216,8 @@ public final class CsMessageBiProcessor extends AbstractMessageBiProcessor<Byte>
                     if (Boolean.TRUE.equals(success)) {
                         MessageAcceptPipelineHelper.qosAckOnSuccess(ctx, packet);
                     } else {
-                        MessageSubmissionResponseHelper.unknown(ctx, packet, ExceptionCodeEnum.UNKNOWN_ERROR);
+                        // 超时、非本人、已撤回都走校验失败。不能收成「未知错误」，否则坐席端无法区分。
+                        MessageSubmissionResponseHelper.rejected(ctx, packet, ExceptionCodeEnum.WITHDRAW_MESSAGE_VERIFY_ERROR);
                         MessageAcceptPipelineHelper.releaseQosOnFailure(packet);
                     }
                 })

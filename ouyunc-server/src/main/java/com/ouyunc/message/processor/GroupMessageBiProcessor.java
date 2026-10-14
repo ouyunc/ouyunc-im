@@ -240,7 +240,7 @@ public final class GroupMessageBiProcessor extends AbstractMessageBiProcessor<By
                     if (Boolean.TRUE.equals(success)) {
                         MessageAcceptPipelineHelper.qosAckOnSuccess(ctx, packet);
                     } else {
-                        MessageSubmissionResponseHelper.unknown(ctx, packet, ExceptionCodeEnum.UNKNOWN_ERROR);
+                        MessageSubmissionResponseHelper.rejected(ctx, packet, ExceptionCodeEnum.WITHDRAW_MESSAGE_VERIFY_ERROR);
                         MessageAcceptPipelineHelper.releaseQosOnFailure(packet);
                     }
                 })
