@@ -15,17 +15,22 @@ import org.slf4j.LoggerFactory;
 import org.springframework.data.redis.core.StringRedisTemplate;
 
 import java.time.Duration;
+import java.util.Collection;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 /**
  * 租户策略 + 敏感词 AC 本地注册表。
- * <p>数据源为 Redis（管理端推送）。热路径只读本机快照；miss / Pub/Sub 失效不阻塞调用方，异步回源覆盖。
- * 加载词库时合并 {@code __global__} 与当前 appKey。</p>
+ * <p>数据源为 Redis（管理端推送）。热路径只读本机快照。冷 miss 在工作线程上等同一次加载，
+ * 超时仍暂缓受理，不能把还没读到的租户策略当成默认 MASK。加载词库时合并 {@code __global__} 与当前 appKey。</p>
  */
 public final class ContentSafetyRegistry {
 
@@ -38,12 +43,16 @@ public final class ContentSafetyRegistry {
     /** 内容安全关闭时共用空自动机，避免每次 new。 */
     private static final SensitiveWordAcAutomaton EMPTY_AUTOMATON = new SensitiveWordAcAutomaton(List.of());
 
+    /** 冷 miss 时等待 Redis 回源的上限。检查跑在工作线程，不占 Netty EventLoop。 */
+    private static final Duration LOAD_WAIT = Duration.ofMillis(800);
+
     /** 读 Redis Hash / String。 */
     private final StringRedisTemplate stringRedis = CacheFactory.STRING_REDIS.instance();
+
     /** 保证 start 只执行一次。 */
     private final AtomicBoolean started = new AtomicBoolean(false);
-    /** 正在异步加载的 appKey，避免同一租户打爆线程池。 */
-    private final Set<String> reloadInFlight = ConcurrentHashMap.newKeySet();
+    /** 同一租户只保留一次在途加载，调用方等待这份结果，避免首条消息在快照写入前被打回。 */
+    private final ConcurrentHashMap<String, CompletableFuture<CachedSafety>> loading = new ConcurrentHashMap<>();
 
     /** 词库和策略一起发布，避免加载失败时半更新；不 Loading，miss 异步加载。 */
     private final Cache<String, CachedSafety> safetyCache = Caffeine.newBuilder()
@@ -73,6 +82,32 @@ public final class ContentSafetyRegistry {
         }
         ContentSafetyReloadSubscriber.start(this::invalidate);
         log.info("内容安全词库/策略注册表已启动");
+    }
+
+    /**
+     * 在对外接客前同步装入已知租户的词库和策略。
+     * Redis 失败只记日志，不阻断启动；对应租户的首条文本会再等一次异步加载。
+     *
+     * @param appKeys 已预热的租户，空集合直接返回
+     */
+    public void warmup(Collection<String> appKeys) {
+        if (!isEnabled() || appKeys == null || appKeys.isEmpty()) {
+            return;
+        }
+        int loaded = 0;
+        for (String raw : appKeys) {
+            if (StringUtils.isBlank(raw)) {
+                continue;
+            }
+            String appKey = raw.trim();
+            try {
+                safetyCache.put(appKey, loadSnapshot(appKey));
+                loaded++;
+            } catch (Exception e) {
+                log.warn("内容安全预热失败，该租户首条文本将等待加载 appKey={}", appKey, e);
+            }
+        }
+        log.info("内容安全预热完成 loaded={} requested={}", loaded, appKeys.size());
     }
 
     /**
@@ -107,12 +142,7 @@ public final class ContentSafetyRegistry {
         if (!isEnabled() || StringUtils.isBlank(appKey)) {
             return defaultPolicy();
         }
-        CachedSafety snapshot = safetyCache.getIfPresent(appKey);
-        if (snapshot == null) {
-            scheduleReload(appKey);
-            throw new IllegalStateException("内容安全策略尚未就绪");
-        }
-        return snapshot.policy();
+        return snapshot(appKey).policy();
     }
 
     /**
@@ -125,12 +155,40 @@ public final class ContentSafetyRegistry {
         if (!isEnabled() || StringUtils.isBlank(appKey)) {
             return EMPTY_AUTOMATON;
         }
+        return snapshot(appKey).dict().automaton();
+    }
+
+    /**
+     * 先读本地快照。没有快照时等待同一次 Redis 加载，超时才抛「尚未就绪」让调用方暂缓受理。
+     */
+    private CachedSafety snapshot(String appKey) {
         CachedSafety snapshot = safetyCache.getIfPresent(appKey);
-        if (snapshot == null) {
-            scheduleReload(appKey);
-            throw new IllegalStateException("内容安全词库尚未就绪");
+        if (snapshot != null) {
+            return snapshot;
         }
-        return snapshot.dict().automaton();
+        CompletableFuture<CachedSafety> future = scheduleReload(appKey);
+        try {
+            return future.get(LOAD_WAIT.toMillis(), TimeUnit.MILLISECONDS);
+        } catch (TimeoutException e) {
+            snapshot = safetyCache.getIfPresent(appKey);
+            if (snapshot != null) {
+                return snapshot;
+            }
+            throw new IllegalStateException("内容安全策略尚未就绪");
+        } catch (ExecutionException e) {
+            snapshot = safetyCache.getIfPresent(appKey);
+            if (snapshot != null) {
+                return snapshot;
+            }
+            Throwable cause = e.getCause() == null ? e : e.getCause();
+            if (cause instanceof RuntimeException runtime) {
+                throw runtime;
+            }
+            throw new IllegalStateException("内容安全策略尚未就绪", cause);
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            throw new IllegalStateException("内容安全策略加载被中断");
+        }
     }
 
     /**
@@ -164,28 +222,39 @@ public final class ContentSafetyRegistry {
         return policy;
     }
 
-    private void scheduleReload(String appKey) {
-        if (StringUtils.isBlank(appKey) || !reloadInFlight.add(appKey)) {
-            return;
-        }
+    private CompletableFuture<CachedSafety> scheduleReload(String appKey) {
+        return loading.compute(appKey, (key, existing) -> {
+            if (existing != null && !existing.isDone()) {
+                return existing;
+            }
+            CompletableFuture<CachedSafety> future = new CompletableFuture<>();
+            try {
+                ThreadPoolManager.messageProcessorExecutor().execute(() -> completeLoad(key, future));
+            } catch (RuntimeException rejected) {
+                // 提交失败时任务不会跑 finally，当场结束 future，下次调用可以再提交。
+                future.completeExceptionally(rejected);
+                log.warn("内容安全重载任务提交失败 appKey={}", key, rejected);
+            }
+            return future;
+        });
+    }
+
+    /** 词库和策略都读成功才发布。Redis 故障时不写入，已有快照保持不变。 */
+    private void completeLoad(String appKey, CompletableFuture<CachedSafety> future) {
         try {
-            ThreadPoolManager.messageProcessorExecutor().execute(() -> {
-                try {
-                    // 全部读取成功后才发布，Redis 故障时保留旧快照，禁止用空词库覆盖。
-                    CachedDict dict = loadDict(appKey);
-                    ContentSafetyPolicy policy = loadPolicy(appKey);
-                    safetyCache.put(appKey, new CachedSafety(dict, policy));
-                } catch (Exception e) {
-                    log.warn("异步加载内容安全失败，保留已有快照 appKey={}", appKey, e);
-                } finally {
-                    reloadInFlight.remove(appKey);
-                }
-            });
-        } catch (RuntimeException rejected) {
-            // execute 被拒绝时任务不会执行 finally，必须在提交端释放，允许下次重试加载。
-            reloadInFlight.remove(appKey);
-            log.warn("内容安全重载任务提交失败 appKey={}", appKey, rejected);
+            CachedSafety snapshot = loadSnapshot(appKey);
+            safetyCache.put(appKey, snapshot);
+            future.complete(snapshot);
+        } catch (Exception e) {
+            log.warn("异步加载内容安全失败，保留已有快照 appKey={}", appKey, e);
+            future.completeExceptionally(e);
+        } finally {
+            loading.remove(appKey, future);
         }
+    }
+
+    private CachedSafety loadSnapshot(String appKey) {
+        return new CachedSafety(loadDict(appKey), loadPolicy(appKey));
     }
 
     /**
