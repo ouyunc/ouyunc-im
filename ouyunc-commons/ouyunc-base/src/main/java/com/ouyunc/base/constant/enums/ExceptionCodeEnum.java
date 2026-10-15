@@ -18,6 +18,7 @@ public enum ExceptionCodeEnum {
     LOGIN_AUTH_ERROR(30001, "登录认证错误"),
     LOGIN_VERIFY_ERROR(30002, "登录校验错误"),
     LOGIN_REFUSED_DRAIN(30003, "服务摘流中，拒绝登录"),
+    LOGIN_RATE_LIMITED(30004, "登录过于频繁"),
 
 
     WITHDRAW_MESSAGE_ERROR(40001, "撤回消息错误"),
@@ -36,6 +37,8 @@ public enum ExceptionCodeEnum {
     CONTENT_SAFETY_BUSY(40012, "内容审核繁忙，请稍后重试"),
     /** HOLD 受理：消息审核中 */
     CONTENT_MEDIA_HOLDING(40013, "消息审核中"),
+    /** 已登录连接发送超过本机速率 */
+    MESSAGE_RATE_LIMITED(40014, "发送过于频繁"),
 
 
     READ_RECEIPT_MESSAGE_ERROR(50001, "读已回执消息错误"),

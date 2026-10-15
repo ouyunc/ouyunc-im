@@ -28,6 +28,8 @@ import com.ouyunc.message.helper.LoginSessionDirectoryHelper;
 import com.ouyunc.message.helper.MessageSender;
 import com.ouyunc.message.protocol.NativePacketProtocol;
 import com.ouyunc.message.schedule.ScheduleTimer;
+import com.ouyunc.message.ratelimit.ConnectionAdmission;
+import com.ouyunc.message.ratelimit.LoginAttemptLimiter;
 import com.ouyunc.message.validator.AppKeyValidator;
 import com.ouyunc.message.validator.LoginAuthValidator;
 import io.netty.channel.Channel;
@@ -153,6 +155,14 @@ public class AuthenticationHandler extends SimpleChannelInboundHandler<Packet> {
                 return;
             }
             loginContent.setScope(LoginScopeEnum.normalizeScope(loginContent.getScope()));
+            // 先于配额和验签：超限请求不能占连接名额，也不能消耗验签 CPU。
+            if (!LoginAttemptLimiter.allow(loginContent.getAppKey(), loginContent.getIdentity(),
+                    ConnectionAdmission.rateLimitIp(ctx))) {
+                ExceptionReporter.reportBusiness(ExceptionCodeEnum.LOGIN_RATE_LIMITED,
+                        "登录过于频繁", "AuthenticationHandler", packet);
+                failLogin(ctx, packet, "登录过于频繁", loginContent.getIdentity());
+                return;
+            }
             // identity 级白名单优先；无定制时等价于 appKey/全局白名单
             if (!AppKeyValidator.INSTANCE.tryReserveForLogin(loginContent.getAppKey(), ctx)
                     || !DeviceTypeRegistry.supports(

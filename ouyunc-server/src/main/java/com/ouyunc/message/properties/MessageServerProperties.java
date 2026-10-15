@@ -50,6 +50,70 @@ public class MessageServerProperties extends MessageProperties {
     @Key("ouyunc.message.proxy-protocol.trusted-proxies")
     List<String> proxyProtocolTrustedProxies;
 
+    /** 新建连接按来源 IP 限流。关闭后仍记录可信来源地址，供登录限流使用。 */
+    @Key(value = "ouyunc.message.rate-limit.connection.enabled", defaultValue = "true")
+    boolean rateLimitConnectionEnabled = true;
+
+    /** 单来源 IP 每秒允许的新建连接数。 */
+    @Key(value = "ouyunc.message.rate-limit.connection.per-ip-per-second", defaultValue = "30")
+    int rateLimitConnectionPerIpPerSecond = 30;
+
+    /** 单来源 IP 新建连接突发容量。 */
+    @Key(value = "ouyunc.message.rate-limit.connection.per-ip-burst", defaultValue = "120")
+    int rateLimitConnectionPerIpBurst = 120;
+
+    /** 登录尝试跨节点计数。关闭后不再访问 Redis 限流键。 */
+    @Key(value = "ouyunc.message.rate-limit.login.enabled", defaultValue = "true")
+    boolean rateLimitLoginEnabled = true;
+
+    /** 登录计数窗口，毫秒。所有 IM 节点应使用同一窗口，否则分钟桶对不齐。 */
+    @Key(value = "ouyunc.message.rate-limit.login.window-millis", defaultValue = "60000")
+    int rateLimitLoginWindowMillis = 60_000;
+
+    /** 登录计数键过期时间，毫秒。短于窗口时会自动抬到窗口的两倍。 */
+    @Key(value = "ouyunc.message.rate-limit.login.key-ttl-millis", defaultValue = "120000")
+    int rateLimitLoginKeyTtlMillis = 120_000;
+
+    /** 同一应用下同一身份在一个窗口内允许的登录次数。 */
+    @Key(value = "ouyunc.message.rate-limit.login.identity-per-window", defaultValue = "30")
+    int rateLimitLoginIdentityPerWindow = 30;
+
+    /** 同一来源地址在一个窗口内允许的登录次数。配额留得较高，避免运营商 NAT 误伤。 */
+    @Key(value = "ouyunc.message.rate-limit.login.ip-per-window", defaultValue = "1200")
+    int rateLimitLoginIpPerWindow = 1200;
+
+    /** 已登录连接的业务包速率。心跳和 QoS 确认不计入。 */
+    @Key(value = "ouyunc.message.rate-limit.channel-send.enabled", defaultValue = "true")
+    boolean rateLimitChannelSendEnabled = true;
+
+    @Key(value = "ouyunc.message.rate-limit.channel-send.messages-per-second", defaultValue = "30")
+    int rateLimitChannelSendMessagesPerSecond = 30;
+
+    @Key(value = "ouyunc.message.rate-limit.channel-send.message-burst", defaultValue = "60")
+    int rateLimitChannelSendMessageBurst = 60;
+
+    @Key(value = "ouyunc.message.rate-limit.channel-send.bytes-per-second", defaultValue = "1048576")
+    int rateLimitChannelSendBytesPerSecond = 1_048_576;
+
+    /** 字节突发小于最大帧长时会抬到最大帧长，避免合法大消息永远发不出去。 */
+    @Key(value = "ouyunc.message.rate-limit.channel-send.byte-burst", defaultValue = "1048576")
+    int rateLimitChannelSendByteBurst = 1_048_576;
+
+    /** 连续超限达到该次数后关闭连接。小于 1 时按 1 处理。 */
+    @Key(value = "ouyunc.message.rate-limit.channel-send.reject-close-threshold", defaultValue = "16")
+    int rateLimitChannelSendRejectCloseThreshold = 16;
+
+    /** HTTP 推送按 appKey 的本机速率。扇出按接收人数扣减。 */
+    @Key(value = "ouyunc.message.rate-limit.http-push.enabled", defaultValue = "true")
+    boolean rateLimitHttpPushEnabled = true;
+
+    @Key(value = "ouyunc.message.rate-limit.http-push.per-app-key-per-second", defaultValue = "200")
+    int rateLimitHttpPushPerAppKeyPerSecond = 200;
+
+    /** 突发小于 toList 上限时会抬到该上限，否则一次满员扇出会被永久拒绝。 */
+    @Key(value = "ouyunc.message.rate-limit.http-push.per-app-key-burst", defaultValue = "512")
+    int rateLimitHttpPushPerAppKeyBurst = 512;
+
     /**
      * 是否开启消息拦截器扫描包路径，true 开启，false-关闭
      */
@@ -925,6 +989,142 @@ public class MessageServerProperties extends MessageProperties {
 
     public void setProxyProtocolTrustedProxies(List<String> proxyProtocolTrustedProxies) {
         this.proxyProtocolTrustedProxies = proxyProtocolTrustedProxies;
+    }
+
+    public boolean isRateLimitConnectionEnabled() {
+        return rateLimitConnectionEnabled;
+    }
+
+    public void setRateLimitConnectionEnabled(boolean rateLimitConnectionEnabled) {
+        this.rateLimitConnectionEnabled = rateLimitConnectionEnabled;
+    }
+
+    public int getRateLimitConnectionPerIpPerSecond() {
+        return rateLimitConnectionPerIpPerSecond;
+    }
+
+    public void setRateLimitConnectionPerIpPerSecond(int rateLimitConnectionPerIpPerSecond) {
+        this.rateLimitConnectionPerIpPerSecond = rateLimitConnectionPerIpPerSecond;
+    }
+
+    public int getRateLimitConnectionPerIpBurst() {
+        return rateLimitConnectionPerIpBurst;
+    }
+
+    public void setRateLimitConnectionPerIpBurst(int rateLimitConnectionPerIpBurst) {
+        this.rateLimitConnectionPerIpBurst = rateLimitConnectionPerIpBurst;
+    }
+
+    public boolean isRateLimitLoginEnabled() {
+        return rateLimitLoginEnabled;
+    }
+
+    public void setRateLimitLoginEnabled(boolean rateLimitLoginEnabled) {
+        this.rateLimitLoginEnabled = rateLimitLoginEnabled;
+    }
+
+    public int getRateLimitLoginWindowMillis() {
+        return rateLimitLoginWindowMillis;
+    }
+
+    public void setRateLimitLoginWindowMillis(int rateLimitLoginWindowMillis) {
+        this.rateLimitLoginWindowMillis = rateLimitLoginWindowMillis;
+    }
+
+    public int getRateLimitLoginKeyTtlMillis() {
+        return rateLimitLoginKeyTtlMillis;
+    }
+
+    public void setRateLimitLoginKeyTtlMillis(int rateLimitLoginKeyTtlMillis) {
+        this.rateLimitLoginKeyTtlMillis = rateLimitLoginKeyTtlMillis;
+    }
+
+    public int getRateLimitLoginIdentityPerWindow() {
+        return rateLimitLoginIdentityPerWindow;
+    }
+
+    public void setRateLimitLoginIdentityPerWindow(int rateLimitLoginIdentityPerWindow) {
+        this.rateLimitLoginIdentityPerWindow = rateLimitLoginIdentityPerWindow;
+    }
+
+    public int getRateLimitLoginIpPerWindow() {
+        return rateLimitLoginIpPerWindow;
+    }
+
+    public void setRateLimitLoginIpPerWindow(int rateLimitLoginIpPerWindow) {
+        this.rateLimitLoginIpPerWindow = rateLimitLoginIpPerWindow;
+    }
+
+    public boolean isRateLimitChannelSendEnabled() {
+        return rateLimitChannelSendEnabled;
+    }
+
+    public void setRateLimitChannelSendEnabled(boolean rateLimitChannelSendEnabled) {
+        this.rateLimitChannelSendEnabled = rateLimitChannelSendEnabled;
+    }
+
+    public int getRateLimitChannelSendMessagesPerSecond() {
+        return rateLimitChannelSendMessagesPerSecond;
+    }
+
+    public void setRateLimitChannelSendMessagesPerSecond(int rateLimitChannelSendMessagesPerSecond) {
+        this.rateLimitChannelSendMessagesPerSecond = rateLimitChannelSendMessagesPerSecond;
+    }
+
+    public int getRateLimitChannelSendMessageBurst() {
+        return rateLimitChannelSendMessageBurst;
+    }
+
+    public void setRateLimitChannelSendMessageBurst(int rateLimitChannelSendMessageBurst) {
+        this.rateLimitChannelSendMessageBurst = rateLimitChannelSendMessageBurst;
+    }
+
+    public int getRateLimitChannelSendBytesPerSecond() {
+        return rateLimitChannelSendBytesPerSecond;
+    }
+
+    public void setRateLimitChannelSendBytesPerSecond(int rateLimitChannelSendBytesPerSecond) {
+        this.rateLimitChannelSendBytesPerSecond = rateLimitChannelSendBytesPerSecond;
+    }
+
+    public int getRateLimitChannelSendByteBurst() {
+        return rateLimitChannelSendByteBurst;
+    }
+
+    public void setRateLimitChannelSendByteBurst(int rateLimitChannelSendByteBurst) {
+        this.rateLimitChannelSendByteBurst = rateLimitChannelSendByteBurst;
+    }
+
+    public int getRateLimitChannelSendRejectCloseThreshold() {
+        return rateLimitChannelSendRejectCloseThreshold;
+    }
+
+    public void setRateLimitChannelSendRejectCloseThreshold(int rateLimitChannelSendRejectCloseThreshold) {
+        this.rateLimitChannelSendRejectCloseThreshold = rateLimitChannelSendRejectCloseThreshold;
+    }
+
+    public boolean isRateLimitHttpPushEnabled() {
+        return rateLimitHttpPushEnabled;
+    }
+
+    public void setRateLimitHttpPushEnabled(boolean rateLimitHttpPushEnabled) {
+        this.rateLimitHttpPushEnabled = rateLimitHttpPushEnabled;
+    }
+
+    public int getRateLimitHttpPushPerAppKeyPerSecond() {
+        return rateLimitHttpPushPerAppKeyPerSecond;
+    }
+
+    public void setRateLimitHttpPushPerAppKeyPerSecond(int rateLimitHttpPushPerAppKeyPerSecond) {
+        this.rateLimitHttpPushPerAppKeyPerSecond = rateLimitHttpPushPerAppKeyPerSecond;
+    }
+
+    public int getRateLimitHttpPushPerAppKeyBurst() {
+        return rateLimitHttpPushPerAppKeyBurst;
+    }
+
+    public void setRateLimitHttpPushPerAppKeyBurst(int rateLimitHttpPushPerAppKeyBurst) {
+        this.rateLimitHttpPushPerAppKeyBurst = rateLimitHttpPushPerAppKeyBurst;
     }
 
     public int getBossThreads() {

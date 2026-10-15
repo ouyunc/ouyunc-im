@@ -4,6 +4,7 @@ import com.ouyunc.base.constant.MessageConstant;
 import com.ouyunc.base.utils.ChannelAttrUtil;
 import com.ouyunc.base.utils.IpUtil;
 import com.ouyunc.message.context.MessageServerContext;
+import com.ouyunc.message.ratelimit.ConnectionAdmission;
 import com.ouyunc.message.support.ProxyProtocolTrustSupport;
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelHandlerContext;
@@ -39,7 +40,12 @@ public class EphemeralRemoteClientRealIpHandler extends SimpleChannelInboundHand
                     return;
                 }
                 String clientRealIp = proxyMessage.sourceAddress();
-                if (StringUtils.isNoneBlank(clientRealIp)) {
+                if (StringUtils.isNotBlank(clientRealIp)) {
+                    if (!ConnectionAdmission.admit(ctx, clientRealIp)) {
+                        log.debug("连接速率超限，关闭 source={}", clientRealIp);
+                        ctx.close();
+                        return;
+                    }
                     ChannelAttrUtil.setChannelAttribute(ctx, MessageConstant.CHANNEL_ATTR_KEY_TAG_CLIENT_REAL_IP, clientRealIp);
                 }
                 ChannelPipeline pipeline = ctx.pipeline();

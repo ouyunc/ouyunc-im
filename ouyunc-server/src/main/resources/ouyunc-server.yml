@@ -53,6 +53,36 @@ ouyunc:
       trusted-proxies:
         - 0.0.0.0/0
         - ::/0
+    # 速率限制。未配置的项使用默认值。修改后需要重启节点，运行中的连接不会热更新令牌桶。
+    # 某一段 enabled 设为 false 即关闭该段，不影响其余段。
+    rate-limit:
+      connection:
+        enabled: true
+        # 单来源 IP 每秒新建连接数 / 突发。直连用远端地址；PROXY 模式只用可信代理头里的源地址。
+        per-ip-per-second: 30
+        per-ip-burst: 120
+      login:
+        enabled: true
+        # 计数窗口与键过期，毫秒。各 IM 节点要配成一样。键过期短于窗口时会自动抬到窗口的两倍。
+        window-millis: 60000
+        key-ttl-millis: 120000
+        # 同一身份 / 同一来源地址在一个窗口内允许的登录次数
+        identity-per-window: 30
+        ip-per-window: 1200
+      channel-send:
+        enabled: true
+        # 已登录连接的业务包。心跳和 QoS 确认不计入。字节突发小于最大帧长时会自动抬高。
+        messages-per-second: 30
+        message-burst: 60
+        bytes-per-second: 1048576
+        byte-burst: 1048576
+        # 连续超限这么多次后关闭连接
+        reject-close-threshold: 16
+      http-push:
+        enabled: true
+        # 按 appKey 的本机配额。扇出按接收人数扣减。突发小于 toList 上限时会自动抬高。
+        per-app-key-per-second: 200
+        per-app-key-burst: 512
     # 日志信息
     log:
       # Netty 管道 LoggingHandler 级别：DEBUG/TRACE 会打完整 ByteBuf hex（极占日志）；生产建议 INFO 或 WARN

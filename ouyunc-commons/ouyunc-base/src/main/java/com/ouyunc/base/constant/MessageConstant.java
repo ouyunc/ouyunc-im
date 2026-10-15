@@ -721,6 +721,12 @@ public class MessageConstant {
     public static final String CHANNEL_ATTR_KEY_TAG_CLIENT_REAL_IP = "CHANNEL_ATTR_KEY_TAG_CLIENT_REAL_IP";
 
     /**
+     * 限流使用的来源地址。只在直连远端地址或可信 PROXY 源地址通过连接准入后写入。
+     * 不读取客户端可伪造的转发头，也不回退成负载均衡器地址。
+     */
+    public static final String CHANNEL_ATTR_KEY_RATE_LIMIT_IP = "CHANNEL_ATTR_KEY_RATE_LIMIT_IP";
+
+    /**
      * channel 的登录标签，存放的是LoginUserInfo对象
      */
     public static final String CHANNEL_ATTR_KEY_TAG_POOL = "CHANNEL_ATTR_KEY_TAG_POOL";
@@ -806,6 +812,9 @@ public class MessageConstant {
      * 处理客户端真实ip
      */
     public static final String REMOTE_CLIENT_REAL_IP_HANDLER = "REMOTE_CLIENT_REAL_IP_HANDLER";
+
+    /** 新建连接准入，按可信来源 IP 做本机速率限制。 */
+    public static final String CONNECTION_ADMIT_HANDLER = "CONNECTION_ADMIT_HANDLER";
 
 
 

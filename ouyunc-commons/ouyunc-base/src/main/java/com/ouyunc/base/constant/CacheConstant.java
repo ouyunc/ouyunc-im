@@ -452,6 +452,28 @@ public class CacheConstant {
     }
 
     /**
+     * 登录速率（来源 IP）分钟桶。只使用已经通过连接准入的地址，调用方不得传入负载均衡器地址。
+     */
+    public static String buildLoginRateIpCacheKey(String clientIp, long epochMinute) {
+        return OUYUNC + "im:login-rate:ip" + COLON + sanitizeLoginRateIp(clientIp) + COLON + epochMinute;
+    }
+
+    /**
+     * 登录速率（应用 + 身份）分钟桶。槽与登录路由一致，便于按身份查看。
+     */
+    public static String buildLoginRateIdentityCacheKey(String appKey, String identity, long epochMinute) {
+        return OUYUNC + "im:login-rate:id" + COLON + withAggregateHashTag(appKey, identity) + COLON + epochMinute;
+    }
+
+    private static String sanitizeLoginRateIp(String clientIp) {
+        String ip = stripHashTagChars(clientIp == null ? "" : clientIp.trim()).replace(':', '_');
+        if (ip.isEmpty()) {
+            return "unknown";
+        }
+        return ip.length() > 64 ? ip.substring(0, 64) : ip;
+    }
+
+    /**
      * IM 进程租约：value=epoch 字符串，PX 由心跳刷新。
      */
     public static String buildImNodeLeaseCacheKey(String nodeId) {

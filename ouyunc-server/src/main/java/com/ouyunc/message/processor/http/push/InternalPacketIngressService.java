@@ -18,6 +18,7 @@ import com.ouyunc.message.helper.QosCommittedDeliverySupport;
 import com.ouyunc.repository.DefaultRepository;
 import com.ouyunc.message.http.HttpPipelineException;
 import com.ouyunc.message.processor.http.push.delivery.HttpPushDeliverySupport;
+import com.ouyunc.message.ratelimit.HttpPushAdmission;
 import com.ouyunc.message.safety.ContentSafetyFacade;
 import io.netty.handler.codec.http.HttpResponseStatus;
 import org.apache.commons.lang3.StringUtils;
@@ -58,6 +59,11 @@ public final class InternalPacketIngressService {
     public static CompletionStage<HttpResponseResult<MessagePushResponse>> push(
             MessagePushRequest request, HttpContext httpContext) throws HttpPipelineException {
         List<String> recipients = resolveRecipients(request);
+        String appKey = httpContext == null ? null : httpContext.getAppKey();
+        if (!HttpPushAdmission.allow(appKey, recipients.size())) {
+            throw new HttpPipelineException(HttpResponseStatus.TOO_MANY_REQUESTS,
+                    HttpResponseCodeEnum.TOO_MANY_REQUESTS, "推送过于频繁");
+        }
         if (recipients.size() > 1) {
             return pushFanout(request, httpContext, recipients);
         }

@@ -17,6 +17,7 @@ import com.ouyunc.message.helper.MessageAcceptPipelineHelper;
 import com.ouyunc.message.helper.MessageSubmissionResponseHelper;
 import com.ouyunc.message.helper.QosAckBackpressureHelper;
 import com.ouyunc.message.processor.AbstractMessageBiProcessor;
+import com.ouyunc.message.ratelimit.ChannelSendBudget;
 import com.ouyunc.message.safety.ContentSafetyIngress;
 import com.ouyunc.message.validator.DeviceValidator;
 import com.ouyunc.message.monitor.QosRetryCancelMetrics;
@@ -104,9 +105,19 @@ public class PacketHandler extends SimpleChannelInboundHandler<Packet> {
             dispatchClientAck(ctx, packet, processor);
             return;
         }
+        long estimatedBytes = estimatePacketBytes(packet);
+        ChannelSendBudget.Decision decision = ChannelSendBudget.admit(ctx.channel(), estimatedBytes);
+        if (decision != ChannelSendBudget.Decision.ALLOW) {
+            MessageSubmissionResponseHelper.retryLater(ctx, packet, ExceptionCodeEnum.MESSAGE_RATE_LIMITED);
+            if (decision == ChannelSendBudget.Decision.CLOSE) {
+                log.warn("连接发送持续超限，关闭 channelId={}", ctx.channel().id().asShortText());
+                ctx.close();
+            }
+            return;
+        }
         ChannelOrderedTasks.executeAsync(ctx.channel(),
                 () -> invokeFull(ctx, packet, processor),
-                MessageConstant.CHANNEL_ORDERED_TASK_DEADLINE_MS, estimatePacketBytes(packet));
+                MessageConstant.CHANNEL_ORDERED_TASK_DEADLINE_MS, estimatedBytes);
     }
 
     private void handleCluster(ChannelHandlerContext ctx, Packet packet) {

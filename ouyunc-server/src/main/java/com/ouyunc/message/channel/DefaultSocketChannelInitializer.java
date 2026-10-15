@@ -9,6 +9,7 @@ import com.ouyunc.message.dispatcher.ProtocolDispatcher;
 import com.ouyunc.message.handler.EphemeralRemoteClientRealIpHandler;
 import com.ouyunc.message.handler.MessageLoggingHandler;
 import com.ouyunc.message.properties.MessageServerProperties;
+import com.ouyunc.message.ratelimit.ConnectionAdmitHandler;
 import io.netty.channel.Channel;
 import io.netty.handler.logging.LogLevel;
 import io.netty.channel.ChannelFuture;
@@ -40,6 +41,8 @@ public class DefaultSocketChannelInitializer extends SocketChannelInitializer {
         // 这里只设置协议分发器，具体可参照netty 的源码例子
         ChannelPipeline pipeline = socketChannel.pipeline();
         MessageServerProperties props = MessageServerContext.serverProperties();
+        // 直连在这里按远端地址准入；PROXY 模式只放行，等可信源地址解析后再计费。
+        pipeline.addLast(MessageConstant.CONNECTION_ADMIT_HANDLER, ConnectionAdmitHandler.INSTANCE);
         // PROXY Protocol 头位于 TLS ClientHello 之前，必须先解析代理头，再进行 TLS 和业务协议识别。
         if (props != null && props.isProxyProtocolEnabled()) {
             pipeline.addLast(MessageConstant.HA_PROXY_PROTOCOL_DECODER_HANDLER, new HAProxyMessageDecoder());
