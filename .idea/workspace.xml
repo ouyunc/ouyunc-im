@@ -4,7 +4,10 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="f5e04433-bce4-4c4c-925d-8bad5c9272b8" name="Changes" comment="增加客户端packet 协议" />
+    <list default="true" id="f5e04433-bce4-4c4c-925d-8bad5c9272b8" name="Changes" comment="增加客户端packet 协议">
+      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyunc-server/src/main/java/com/ouyunc/message/safety/SensitiveWordAcAutomaton.java" beforeDir="false" afterPath="$PROJECT_DIR$/ouyunc-server/src/main/java/com/ouyunc/message/safety/SensitiveWordAcAutomaton.java" afterDir="false" />
+    </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
     <option name="HIGHLIGHT_NON_ACTIVE_CHANGELIST" value="false" />
@@ -312,15 +315,7 @@
       <workItem from="1791860851164" duration="8389000" />
       <workItem from="1791940419475" duration="8679000" />
       <workItem from="1792025431419" duration="1514000" />
-      <workItem from="1792030209381" duration="8267000" />
-    </task>
-    <task id="LOCAL-00148" summary="增加客户端packet 协议">
-      <option name="closed" value="true" />
-      <created>1790659395879</created>
-      <option name="number" value="00148" />
-      <option name="presentableId" value="LOCAL-00148" />
-      <option name="project" value="LOCAL" />
-      <updated>1790659395879</updated>
+      <workItem from="1792030209381" duration="12251000" />
     </task>
     <task id="LOCAL-00149" summary="增加客户端packet 协议">
       <option name="closed" value="true" />
@@ -706,7 +701,15 @@
       <option name="project" value="LOCAL" />
       <updated>1792047835199</updated>
     </task>
-    <option name="localTasksCounter" value="197" />
+    <task id="LOCAL-00197" summary="增加客户端packet 协议">
+      <option name="closed" value="true" />
+      <created>1792055660222</created>
+      <option name="number" value="00197" />
+      <option name="presentableId" value="LOCAL-00197" />
+      <option name="project" value="LOCAL" />
+      <updated>1792055660222</updated>
+    </task>
+    <option name="localTasksCounter" value="198" />
     <servers />
   </component>
   <component name="TypeScriptGeneratedFilesManager">
