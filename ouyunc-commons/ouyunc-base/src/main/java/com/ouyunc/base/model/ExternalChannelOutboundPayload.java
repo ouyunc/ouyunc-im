@@ -4,7 +4,7 @@ import java.io.Serial;
 import java.io.Serializable;
 
 /**
- * 外部渠道下行任务（Kafka {@code ouyunc_external_channel_outbound}），由独立适配服务消费。
+ * 外部渠道下行任务（Kafka {@code external_channel_outbound}），由独立适配服务消费。
  */
 public class ExternalChannelOutboundPayload implements Serializable {
 

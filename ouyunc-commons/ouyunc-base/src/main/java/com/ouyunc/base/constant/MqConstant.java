@@ -29,9 +29,9 @@ public class MqConstant {
 
 
     /**
-     * 发送消息失败异常 topic
+     * 发送消息失败异常 topic。逻辑名不再带 {@code ouyunc_}，环境隔离只走 {@link MqDestination} 前缀。
      */
-    public static final String MQ_MESSAGE_SEND_FAIL_TOPIC = MessageConstant.OUYUNC + MessageConstant.UNDERLINE + MQ_MESSAGE_SEND_FAIL_GROUP;
+    public static final String MQ_MESSAGE_SEND_FAIL_TOPIC = MQ_MESSAGE_SEND_FAIL_GROUP;
 
     /**
      * 异常 group
@@ -43,7 +43,7 @@ public class MqConstant {
     /**
      * 异常 topic
      */
-    public static final String MQ_EXCEPTION_TOPIC = MessageConstant.OUYUNC + MessageConstant.UNDERLINE + MQ_EXCEPTION_GROUP;
+    public static final String MQ_EXCEPTION_TOPIC = MQ_EXCEPTION_GROUP;
 
 
 
@@ -57,7 +57,7 @@ public class MqConstant {
     /**
      * 保存消息 topic
      */
-    public static final String MQ_SAVE_MESSAGE_TOPIC = MessageConstant.OUYUNC + MessageConstant.UNDERLINE + MQ_SAVE_MESSAGE_GROUP;
+    public static final String MQ_SAVE_MESSAGE_TOPIC = MQ_SAVE_MESSAGE_GROUP;
 
 
     /**
@@ -70,7 +70,7 @@ public class MqConstant {
     /**
      * 撤销消息 topic
      */
-    public static final String MQ_WITHDRAW_MESSAGE_TOPIC =  MessageConstant.OUYUNC + MessageConstant.UNDERLINE + MQ_WITHDRAW_MESSAGE_GROUP;
+    public static final String MQ_WITHDRAW_MESSAGE_TOPIC = MQ_WITHDRAW_MESSAGE_GROUP;
 
 
     /**
@@ -83,7 +83,7 @@ public class MqConstant {
     /**
      * 已读回执消息 topic
      */
-    public static final String MQ_READ_RECEIPT_MESSAGE_TOPIC =  MessageConstant.OUYUNC + MessageConstant.UNDERLINE + MQ_READ_RECEIPT_MESSAGE_GROUP;
+    public static final String MQ_READ_RECEIPT_MESSAGE_TOPIC = MQ_READ_RECEIPT_MESSAGE_GROUP;
 
 
     /**
@@ -96,7 +96,7 @@ public class MqConstant {
     /**
      * 好友请求（加入/同意/拒绝） topic
      */
-    public static final String MQ_FRIEND_REQUEST_TOPIC =  MessageConstant.OUYUNC + MessageConstant.UNDERLINE + MQ_FRIEND_REQUEST_GROUP;
+    public static final String MQ_FRIEND_REQUEST_TOPIC = MQ_FRIEND_REQUEST_GROUP;
 
 
 
@@ -109,7 +109,7 @@ public class MqConstant {
     /**
      * 群请求 topic
      */
-    public static final String MQ_GROUP_REQUEST_TOPIC =  MessageConstant.OUYUNC + MessageConstant.UNDERLINE + MQ_GROUP_REQUEST_GROUP;
+    public static final String MQ_GROUP_REQUEST_TOPIC = MQ_GROUP_REQUEST_GROUP;
 
     /**
      * 归档翻译消费组。与 message_save 共用归档 topic，组名独立，避免改动 message_save 的位点。
@@ -129,14 +129,14 @@ public class MqConstant {
     /**
      * 外部渠道下行 topic，由外渠适配服务消费
      */
-    public static final String MQ_EXTERNAL_CHANNEL_OUTBOUND_TOPIC = MessageConstant.OUYUNC + MessageConstant.UNDERLINE + MQ_EXTERNAL_CHANNEL_OUTBOUND_GROUP;
+    public static final String MQ_EXTERNAL_CHANNEL_OUTBOUND_TOPIC = MQ_EXTERNAL_CHANNEL_OUTBOUND_GROUP;
 
     /**
      * 客服 ticket 活动通知（IM → CS），与 {@code CsKafkaTopics#TICKET_ACTIVITY} 一致。
      */
     public static final String MQ_CS_TICKET_ACTIVITY_GROUP = "cs_ticket_activity";
 
-    public static final String MQ_CS_TICKET_ACTIVITY_TOPIC = MessageConstant.OUYUNC + MessageConstant.UNDERLINE + MQ_CS_TICKET_ACTIVITY_GROUP;
+    public static final String MQ_CS_TICKET_ACTIVITY_TOPIC = MQ_CS_TICKET_ACTIVITY_GROUP;
 
 
     /**
@@ -144,7 +144,7 @@ public class MqConstant {
      */
     public static final String MQ_CS_AGENT_PRESENCE_GROUP = "cs_agent_presence";
 
-    public static final String MQ_CS_AGENT_PRESENCE_TOPIC = MessageConstant.OUYUNC + MessageConstant.UNDERLINE + MQ_CS_AGENT_PRESENCE_GROUP;
+    public static final String MQ_CS_AGENT_PRESENCE_TOPIC = MQ_CS_AGENT_PRESENCE_GROUP;
 
 
     /**

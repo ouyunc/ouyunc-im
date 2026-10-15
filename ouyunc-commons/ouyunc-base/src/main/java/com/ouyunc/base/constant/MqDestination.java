@@ -8,7 +8,7 @@ import java.util.Locale;
 
 /**
  * 测试/生产共用同一 Kafka 集群时，给 topic 和消费组加环境前缀。
- * 生产 prefix 为空，名称仍是 {@code ouyunc_friend_request}；测试为 {@code test_ouyunc_friend_request}。
+ * 生产 prefix 为空，名称仍是 {@code friend_request}；测试为 {@code test_friend_request}。
  */
 public final class MqDestination {
 
