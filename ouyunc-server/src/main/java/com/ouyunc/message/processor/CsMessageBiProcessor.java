@@ -178,7 +178,8 @@ public final class CsMessageBiProcessor extends AbstractMessageBiProcessor<Byte>
         CsHelper.saveChatLastMessage(repository(), route, packet);
         CsHelper.notifyAfterSave(packet, route);
         SenderReadCompletionSupport.completeCs(packet, route);
-        CsHelper.deliverMessage(packet, route, false);
+        // true：把落库后的正文（含敏感词打码）回推给发送方，本地气泡才能换成 *。
+        CsHelper.deliverMessage(packet, route, true);
     }
 
     private PrepareOutcome validateAndPrepare(Packet packet) {

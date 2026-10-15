@@ -4,9 +4,7 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="f5e04433-bce4-4c4c-925d-8bad5c9272b8" name="Changes" comment="增加客户端packet 协议">
-      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-    </list>
+    <list default="true" id="f5e04433-bce4-4c4c-925d-8bad5c9272b8" name="Changes" comment="增加客户端packet 协议" />
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
     <option name="HIGHLIGHT_NON_ACTIVE_CHANGELIST" value="false" />
@@ -148,7 +146,7 @@
       <recent name="com.ouyunc.db.jdbc" />
     </key>
   </component>
-  <component name="RunManager" selected="JUnit.RateLimitTest.undersizedBurstsAreRaisedToTheProtocolMinimum">
+  <component name="RunManager" selected="Application.ServerLauncher">
     <configuration name="ServerLauncher" type="Application" factoryName="Application" singleton="false" temporary="true" nameIsGenerated="true">
       <option name="MAIN_CLASS_NAME" value="com.ouyunc.message.ServerLauncher" />
       <module name="ouyunc-server" />
@@ -265,11 +263,11 @@
     </list>
     <recent_temporary>
       <list>
+        <item itemvalue="Application.ServerLauncher" />
         <item itemvalue="JUnit.RateLimitTest.undersizedBurstsAreRaisedToTheProtocolMinimum" />
         <item itemvalue="JUnit.RateLimitTest.oversizedFrameDoesNotConsumeTheMessageToken" />
         <item itemvalue="JUnit.RateLimitTest.blankKeyIsRejectedWithoutSharingABucket" />
         <item itemvalue="JUnit.RateLimitTest.bucketRefillsAfterBurstIsSpent" />
-        <item itemvalue="Application.ServerLauncher" />
       </list>
     </recent_temporary>
   </component>
@@ -314,15 +312,7 @@
       <workItem from="1791860851164" duration="8389000" />
       <workItem from="1791940419475" duration="8679000" />
       <workItem from="1792025431419" duration="1514000" />
-      <workItem from="1792030209381" duration="7884000" />
-    </task>
-    <task id="LOCAL-00147" summary="增加客户端packet 协议">
-      <option name="closed" value="true" />
-      <created>1790646496316</created>
-      <option name="number" value="00147" />
-      <option name="presentableId" value="LOCAL-00147" />
-      <option name="project" value="LOCAL" />
-      <updated>1790646496316</updated>
+      <workItem from="1792030209381" duration="8267000" />
     </task>
     <task id="LOCAL-00148" summary="增加客户端packet 协议">
       <option name="closed" value="true" />
@@ -708,7 +698,15 @@
       <option name="project" value="LOCAL" />
       <updated>1792043473938</updated>
     </task>
-    <option name="localTasksCounter" value="196" />
+    <task id="LOCAL-00196" summary="增加客户端packet 协议">
+      <option name="closed" value="true" />
+      <created>1792047835199</created>
+      <option name="number" value="00196" />
+      <option name="presentableId" value="LOCAL-00196" />
+      <option name="project" value="LOCAL" />
+      <updated>1792047835199</updated>
+    </task>
+    <option name="localTasksCounter" value="197" />
     <servers />
   </component>
   <component name="TypeScriptGeneratedFilesManager">

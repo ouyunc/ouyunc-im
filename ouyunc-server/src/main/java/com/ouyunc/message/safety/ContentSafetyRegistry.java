@@ -46,6 +46,9 @@ public final class ContentSafetyRegistry {
     /** 冷 miss 时等待 Redis 回源的上限。检查跑在工作线程，不占 Netty EventLoop。 */
     private static final Duration LOAD_WAIT = Duration.ofMillis(800);
 
+    /** 本地快照上限。每个租户一份词库加策略，超出后淘汰最久未访问的。 */
+    private static final int SAFETY_CACHE_MAXIMUM_SIZE = 20_000;
+
     /** 读 Redis Hash / String。 */
     private final StringRedisTemplate stringRedis = CacheFactory.STRING_REDIS.instance();
 
@@ -56,7 +59,7 @@ public final class ContentSafetyRegistry {
 
     /** 词库和策略一起发布，避免加载失败时半更新；不 Loading，miss 异步加载。 */
     private final Cache<String, CachedSafety> safetyCache = Caffeine.newBuilder()
-            .maximumSize(2_000)
+            .maximumSize(SAFETY_CACHE_MAXIMUM_SIZE)
             .expireAfterAccess(Duration.ofMinutes(30))
             .build();
 
@@ -287,7 +290,8 @@ public final class ContentSafetyRegistry {
         loadWordsInto(CacheConstant.CONTENT_SAFETY_GLOBAL_APP_KEY, words);
         loadWordsInto(appKey, words);
         long version = readVersion(appKey);
-        log.debug("加载敏感词 appKey={} size={} version={}", appKey, words.size(), version);
+        // 空词库会让文本全部放行。打 info，避免只在 debug 里才能发现 Redis 没推词。
+        log.info("加载敏感词 appKey={} size={} version={}", appKey, words.size(), version);
         return new CachedDict(version, new SensitiveWordAcAutomaton(words));
     }
 
