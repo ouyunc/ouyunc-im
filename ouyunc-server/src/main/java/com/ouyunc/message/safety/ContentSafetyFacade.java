@@ -1,7 +1,6 @@
 package com.ouyunc.message.safety;
 
 import com.alibaba.fastjson2.JSON;
-import com.alibaba.fastjson2.JSONObject;
 import com.ouyunc.base.constant.CacheConstant;
 import com.ouyunc.base.constant.enums.ContentSafetyAction;
 import com.ouyunc.base.constant.enums.ContentSafetyHitType;
@@ -41,27 +40,15 @@ public final class ContentSafetyFacade {
     }
 
     /**
-     * 带 event 的系统通知不是用户聊天文本。关单、分配、排队都是这种 JSON。
-     * 送去第三方审核时，鉴权失败或超时会把在线通知拖成数秒甚至直接丢弃。
-     * 不带 event 的纯文本通知仍送审。客户端伪造的 SERVER_NOTIFY 在 preProcess 就会被拒绝。
+     * 客服会话事件不是用户聊天文本。送去第三方审核时，鉴权失败或超时会把在线通知拖成数秒甚至直接丢弃。
+     * 纯文本 SERVER_NOTIFY 仍送审。客户端伪造的 SERVER_NOTIFY 在 preProcess 就会被拒绝。
      *
      * @param packet 协议包
      * @return true 时直接放行，不访问词库和第三方
      */
     private static boolean isSessionControlNotify(Packet packet) {
-        if (packet.getMessageType() != MessageTypeEnum.SERVER_NOTIFY.getType()) {
-            return false;
-        }
-        String content = packet.getMessage().getContent();
-        if (StringUtils.isBlank(content) || !content.trim().startsWith("{")) {
-            return false;
-        }
-        try {
-            JSONObject body = JSON.parseObject(content);
-            return body != null && StringUtils.isNotBlank(body.getString("event"));
-        } catch (RuntimeException ignored) {
-            return false;
-        }
+        return packet.getMessageType() == MessageTypeEnum.SERVER_NOTIFY.getType()
+                && packet.getMessage().getContentType() == MessageContentTypeEnum.CS_SESSION_EVENT_CONTENT.getType();
     }
 
     /**
@@ -99,8 +86,7 @@ public final class ContentSafetyFacade {
         }
         int contentType = packet.getMessage().getContentType();
         // 已读、撤回等控制命令无需审核正文，不应被词库冷启动或审核故障阻断。
-        // 关单/转接/托管等 SERVER_NOTIFY 的 pushType=0，正文类型仍是 TEXT。
-        // 若送去第三方审核，鉴权失败或超时时 HTTP 推送被拒，在线端只能等轮询。
+        // 客服会话事件 contentType=-110，不送审。
         if (isSessionControlNotify(packet)) {
             return ContentSafetyResult.pass();
         }

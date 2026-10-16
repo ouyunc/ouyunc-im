@@ -15,19 +15,18 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 class ContentSafetyFacadeTest {
 
     @Test
-    void sessionClosedNotifySkipsTextModeration() {
+    void csSessionEventContentSkipsTextModeration() {
         Message message = new Message(
-                "closed-1",
+                "assigned-1",
                 "cs-system",
-                "visitor-1",
-                MessageContentTypeEnum.TEXT_CONTENT.getType(),
-                "{\"event\":\"cs.session.closed\",\"ticketId\":\"100\"}",
+                "agent-1",
+                MessageContentTypeEnum.CS_SESSION_EVENT_CONTENT.getType(),
+                "{\"event\":\"cs.session.assigned\",\"ticketId\":\"100\"}",
                 1L);
         Packet packet = new Packet(
-                (byte) 1, (byte) 1, 1L, (byte) 1, (byte) 0, (byte) 0, (byte) 2,
+                (byte) 1, (byte) 1, 2L, (byte) 1, (byte) 0, (byte) 0, (byte) 2,
                 MessageTypeEnum.SERVER_NOTIFY.getType(),
                 message);
-        ContentSafetyResult result = ContentSafetyFacade.check(packet);
-        assertTrue(result.isPassed());
+        assertTrue(ContentSafetyFacade.check(packet).isPassed());
     }
 }

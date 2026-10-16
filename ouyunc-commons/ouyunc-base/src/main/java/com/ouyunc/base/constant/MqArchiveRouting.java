@@ -35,7 +35,7 @@ public final class MqArchiveRouting {
 
     /**
      * 不走 {@link MqConstant#MQ_SAVE_MESSAGE_TOPIC}：
-     * 已读/撤回/好友/群请求走领域 topic；译文就绪(-112)/群操作(-111) 为投递 overlay，只在线通知不冷归档。
+     * 已读/撤回/好友/群请求走领域 topic；译文就绪(-112)/群操作(-111)/客服会话事件(-110) 为投递 overlay，只在线通知不冷归档。
      */
     public static boolean skipsSaveArchive(Packet packet) {
         if (packet == null) {
@@ -60,7 +60,8 @@ public final class MqArchiveRouting {
      */
     public static boolean isServerNotifyOverlayContent(int contentType) {
         return contentType == MessageContentTypeEnum.TRANSLATION_READY_CONTENT.getType()
-                || contentType == MessageContentTypeEnum.GROUP_OP_NOTIFY_CONTENT.getType();
+                || contentType == MessageContentTypeEnum.GROUP_OP_NOTIFY_CONTENT.getType()
+                || contentType == MessageContentTypeEnum.CS_SESSION_EVENT_CONTENT.getType();
     }
 
     public static boolean isFriendRequestType(byte messageType) {

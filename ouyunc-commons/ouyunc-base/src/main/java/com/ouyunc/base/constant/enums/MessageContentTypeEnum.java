@@ -2,6 +2,7 @@ package com.ouyunc.base.constant.enums;
 
 import com.ouyunc.base.constant.NumberConstant;
 import com.ouyunc.base.packet.message.content.ChatFileContent;
+import com.ouyunc.base.packet.message.content.CsSessionEventContent;
 import com.ouyunc.base.packet.message.content.GroupOpNotifyContent;
 import com.ouyunc.base.packet.message.content.GroupRequestContent;
 import com.ouyunc.base.packet.message.content.ImageContent;
@@ -15,6 +16,7 @@ import com.ouyunc.base.packet.message.content.ProductCardContent;
 import com.ouyunc.base.packet.message.content.ProfileCardContent;
 import com.ouyunc.base.packet.message.content.QosAckContent;
 import com.ouyunc.base.packet.message.content.MessageSubmissionResponseContent;
+import com.ouyunc.base.packet.message.content.ServerNotifyContent;
 import com.ouyunc.base.packet.message.content.RecommendItemContent;
 import com.ouyunc.base.packet.message.content.TranslationReadyContent;
 import com.ouyunc.base.packet.message.content.VideoCallContent;
@@ -39,10 +41,10 @@ public enum MessageContentTypeEnum implements MessageContentType {
 
     GROUP_REQUEST_CONTENT(NumberConstant.NUMBER_NEGATIVE_8, ProtocolTypeEnum.ZERO.getProtocol(), ProtocolTypeEnum.ZERO.getProtocolVersion(), GroupRequestContent.class,  "群请求消息内容"),
 
-    /** 同账号同设备（sn 相同）重复登录，通知旧连接下线 */
-    DUPLICATE_LOGIN_CONTENT(NumberConstant.NUMBER_NEGATIVE_9, ProtocolTypeEnum.ZERO.getProtocol(), ProtocolTypeEnum.ZERO.getProtocolVersion(), String.class, "同设备重复登录通知"),
-    /** 同账号异设备（sn 不同）登录，通知旧连接下线 */
-    REMOTE_LOGIN_CONTENT(NumberConstant.NUMBER_NEGATIVE_10, ProtocolTypeEnum.ZERO.getProtocol(), ProtocolTypeEnum.ZERO.getProtocolVersion(), String.class, "远程登录踢下线通知"),
+    /** 同账号同设备（sn 相同）重复登录。正文为 {@link ServerNotifyContent} JSON，不是纯字符串 */
+    DUPLICATE_LOGIN_CONTENT(NumberConstant.NUMBER_NEGATIVE_9, ProtocolTypeEnum.ZERO.getProtocol(), ProtocolTypeEnum.ZERO.getProtocolVersion(), ServerNotifyContent.class, "同设备重复登录通知"),
+    /** 同账号异设备（sn 不同）登录。正文为 {@link ServerNotifyContent} JSON，不是纯字符串 */
+    REMOTE_LOGIN_CONTENT(NumberConstant.NUMBER_NEGATIVE_10, ProtocolTypeEnum.ZERO.getProtocol(), ProtocolTypeEnum.ZERO.getProtocolVersion(), ServerNotifyContent.class, "远程登录踢下线通知"),
     QOS_ACK_CONTENT(NumberConstant.NUMBER_NEGATIVE_11, ProtocolTypeEnum.ZERO.getProtocol(), ProtocolTypeEnum.ZERO.getProtocolVersion(), QosAckContent.class, "客户端确认服务端投递的 ACK 内容"),
     MESSAGE_SUBMISSION_RESPONSE_CONTENT(NumberConstant.NUMBER_NEGATIVE_12, ProtocolTypeEnum.ZERO.getProtocol(), ProtocolTypeEnum.ZERO.getProtocolVersion(), MessageSubmissionResponseContent.class, "客户端消息提交受理响应内容"),
 
@@ -79,6 +81,11 @@ public enum MessageContentTypeEnum implements MessageContentType {
     TRANSLATION_READY_CONTENT(NumberConstant.NUMBER_NEGATIVE_112, ProtocolTypeEnum.ZERO.getProtocol(), ProtocolTypeEnum.ZERO.getProtocolVersion(), TranslationReadyContent.class, "消息译文就绪"),
     /** 群操作通知 overlay，配合 SERVER_NOTIFY；禁止当聊天消息落会话 */
     GROUP_OP_NOTIFY_CONTENT(NumberConstant.NUMBER_NEGATIVE_111, ProtocolTypeEnum.ZERO.getProtocol(), ProtocolTypeEnum.ZERO.getProtocolVersion(), GroupOpNotifyContent.class, "群操作通知"),
+    /**
+     * 客服会话事件 overlay，配合 SERVER_NOTIFY；禁止当聊天消息落会话。
+     * 线上 JSON 按事件形状使用子类，服务端只按公共头 {@link CsSessionEventContent} 解析。
+     */
+    CS_SESSION_EVENT_CONTENT(NumberConstant.NUMBER_NEGATIVE_110, ProtocolTypeEnum.ZERO.getProtocol(), ProtocolTypeEnum.ZERO.getProtocolVersion(), CsSessionEventContent.class, "客服会话事件"),
 
     TEXT_CONTENT(NumberConstant.NUMBER_NEGATIVE_128, ProtocolTypeEnum.ZERO.getProtocol(), ProtocolTypeEnum.ZERO.getProtocolVersion(), String.class, "通用文本内容类型"),
 

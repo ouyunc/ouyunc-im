@@ -57,7 +57,7 @@ public final class ServerNotifyMessageBiProcessor extends AbstractMessageBiProce
                 log.debug("SERVER_NOTIFY 接收方 {} 不在线", message.getTo());
                 return;
             }
-            if (isRemoteLogin(message)) {
+            if (isSessionKick(message)) {
                 targets = filterKickDevice(targets, packet.getDeviceType());
             }
             MessageDeliveryPlanner.deliverOnlineClients(packet, targets);
@@ -74,8 +74,10 @@ public final class ServerNotifyMessageBiProcessor extends AbstractMessageBiProce
                 || MessageConstant.SPLAT.equals(packet.getMessage().getTo());
     }
 
-    private static boolean isRemoteLogin(Message message) {
-        return message.getContentType() == MessageContentTypeEnum.REMOTE_LOGIN_CONTENT.getType();
+    private static boolean isSessionKick(Message message) {
+        int contentType = message.getContentType();
+        return contentType == MessageContentTypeEnum.DUPLICATE_LOGIN_CONTENT.getType()
+                || contentType == MessageContentTypeEnum.REMOTE_LOGIN_CONTENT.getType();
     }
 
     /**

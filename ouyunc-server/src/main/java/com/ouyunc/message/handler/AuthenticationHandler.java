@@ -420,7 +420,7 @@ public class AuthenticationHandler extends SimpleChannelInboundHandler<Packet> {
     }
 
     /**
-     * CAS 绑定胜出后踢旧会话：同 sn 仅静默断开；异 sn 发远程登录通知后断开（含跨节点）。
+     * CAS 绑定胜出后踢旧会话：同 sn 本机直接断开，跨节点发同设备通知(-9)；异 sn 发远程登录通知(-10) 后断开。
      * 本机旧连接已在 {@link ClientHelper#bindAsync} 注册时关闭，此处主要处理跨节点旧会话。
      */
     private void kickPreviousSessionAfterBindWin(Packet packet, LoginClientInfo loginClientInfo,
@@ -471,7 +471,7 @@ public class AuthenticationHandler extends SimpleChannelInboundHandler<Packet> {
     }
 
     /**
-     * 同 sn 顶号：向旧会话所在节点投递关闭通知。本机旧连接已在 bind 时关闭。
+     * 同 sn 顶号：向旧会话所在节点投递 contentType=-9。本机旧连接已在 bind 时关闭。
      */
     private void closePreviousRemoteQuietly(LoginClientInfo previous) {
         if (previous == null || StringUtils.isBlank(previous.getLoginServerAddress())) {
@@ -486,7 +486,7 @@ public class AuthenticationHandler extends SimpleChannelInboundHandler<Packet> {
                     MessageContext.idGenerator().generateIdStr(),
                     null,
                     previous.getIdentity(),
-                    MessageContentTypeEnum.REMOTE_LOGIN_CONTENT.getType(),
+                    MessageContentTypeEnum.DUPLICATE_LOGIN_CONTENT.getType(),
                     Serializer.JSON.serializeToString(new ServerNotifyContent(
                             MessageConstant.REMOTE_LOGIN_SAME_DEVICE_KICK)),
                     TimeUtil.currentTimeMillis(),

@@ -317,7 +317,7 @@ public final class MessageSender {
         // 写出用副本，避免 ensureOutboundTarget 或后续编码改到调用方持有的 Packet。
         // 协议仍从本机 Channel 读取，不使用副本上的旧协议字段。
         Packet outbound = PacketCopyHelper.copyForDelivery(packet, target);
-        writeOnChannel(ctx, outbound, wrapRemoteLoginClose(outbound, target, sendCallback), true);
+        writeOnChannel(ctx, outbound, wrapSessionKickClose(outbound, target, sendCallback), true);
     }
 
     private static boolean hasLocalActiveConnection(Target target) {
@@ -331,10 +331,10 @@ public final class MessageSender {
     }
 
     /**
-     * REMOTE_LOGIN 落地写出后再关旧连接；集群 CLIENT 转发包不进 ServerNotify 处理器，必须挂在写出回调上。
+     * 踢线通知落地写出后再关旧连接；集群 CLIENT 转发包不进 ServerNotify 处理器，必须挂在写出回调上。
      */
-    private static SendCallback wrapRemoteLoginClose(Packet packet, Target target, SendCallback sendCallback) {
-        if (!ClientHelper.isRemoteLoginNotify(packet)) {
+    private static SendCallback wrapSessionKickClose(Packet packet, Target target, SendCallback sendCallback) {
+        if (!ClientHelper.isSessionKickNotify(packet)) {
             return sendCallback;
         }
         return sendResult -> {

@@ -8,9 +8,12 @@ import com.ouyunc.base.constant.enums.MessageTypeEnum;
 import com.ouyunc.base.encrypt.Encrypt;
 import com.ouyunc.base.exception.MessageException;
 import com.ouyunc.base.packet.message.Message;
+import com.ouyunc.base.packet.message.content.CsSessionEventContent;
+import com.ouyunc.base.packet.message.content.CsSessionNoticeEventContent;
 import com.ouyunc.base.packet.message.content.ImageContent;
 import com.ouyunc.base.packet.message.content.LoginContent;
 import com.ouyunc.base.packet.message.content.MessageContents;
+import com.ouyunc.base.packet.message.content.ServerNotifyContent;
 import com.ouyunc.base.utils.IdentityUtil;
 import com.ouyunc.base.utils.ImRouteCodec;
 import com.ouyunc.base.utils.LoginSignatureUtil;
@@ -24,6 +27,7 @@ import org.junit.jupiter.params.provider.EnumSource;
 import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -66,6 +70,27 @@ class FeatureMatrixTest {
         Packet decoded = writeThenRead(packet(MessageTypeEnum.ONE_2_ONE.getType(), message));
         assertEquals(contentType.getType(), decoded.getMessage().getContentType());
         assertEquals(json, decoded.getMessage().getContent());
+    }
+
+    @Test
+    void kickAndCsEventContentRoundTripAsObjects() {
+        String kickJson = MessageContents.toJson(
+                new ServerNotifyContent("kicked"), MessageContentTypeEnum.REMOTE_LOGIN_CONTENT);
+        Object kick = MessageContents.parse(kickJson, MessageContentTypeEnum.DUPLICATE_LOGIN_CONTENT);
+        assertTrue(kick instanceof ServerNotifyContent);
+        assertEquals("kicked", ((ServerNotifyContent) kick).getNotify());
+
+        CsSessionNoticeEventContent event = new CsSessionNoticeEventContent();
+        event.setEvent("cs.session.hosted");
+        event.setTicketId("100");
+        event.setMessage("当前为托管接待");
+        String eventJson = MessageContents.toJson(event, MessageContentTypeEnum.CS_SESSION_EVENT_CONTENT);
+        assertTrue(eventJson.contains("\"event\":\"cs.session.hosted\""));
+        assertTrue(eventJson.contains("\"message\":\"当前为托管接待\""));
+        assertFalse(eventJson.contains("skillCode"));
+        CsSessionEventContent parsed = (CsSessionEventContent) MessageContents.parse(
+                eventJson, MessageContentTypeEnum.CS_SESSION_EVENT_CONTENT);
+        assertEquals("100", parsed.getTicketId());
     }
 
     @Test

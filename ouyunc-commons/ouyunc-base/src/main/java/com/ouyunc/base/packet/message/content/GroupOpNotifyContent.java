@@ -22,10 +22,13 @@ public class GroupOpNotifyContent implements Serializable {
 
     /** 操作类型，见本类 OP_* 常量 */
     private String op;
+    /** 群 id */
     private String groupId;
+    /** 执行这次操作的用户 */
     private String operatorId;
+    /** 被操作的成员。解散、全体禁言、主动退群时为空。 */
     private String targetUserId;
-    /** 开/关类操作：禁言、设管理员、屏蔽 */
+    /** 开/关。只用于禁言、设管理员、屏蔽；其余操作保持 null。 */
     private Boolean flag;
 
     public GroupOpNotifyContent() {

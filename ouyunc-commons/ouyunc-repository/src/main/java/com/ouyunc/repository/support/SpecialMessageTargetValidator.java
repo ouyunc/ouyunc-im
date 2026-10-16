@@ -25,7 +25,10 @@ final class SpecialMessageTargetValidator {
         if (contentType == MessageContentTypeEnum.WITHDRAW_CONTENT.getType()
                 || contentType == MessageContentTypeEnum.READ_RECEIPT_CONTENT.getType()
                 || contentType == MessageContentTypeEnum.TRANSLATION_READY_CONTENT.getType()
-                || contentType == MessageContentTypeEnum.GROUP_OP_NOTIFY_CONTENT.getType()) {
+                || contentType == MessageContentTypeEnum.GROUP_OP_NOTIFY_CONTENT.getType()
+                || contentType == MessageContentTypeEnum.CS_SESSION_EVENT_CONTENT.getType()
+                || contentType == MessageContentTypeEnum.DUPLICATE_LOGIN_CONTENT.getType()
+                || contentType == MessageContentTypeEnum.REMOTE_LOGIN_CONTENT.getType()) {
             return false;
         }
         return contentType != MessageContentTypeEnum.PING_PONG_CONTENT.getType()

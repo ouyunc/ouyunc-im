@@ -875,7 +875,7 @@ public class ClientHelper {
             }
             Packet outbound = PacketCopyHelper.copyForDelivery(loopPacket, target);
             outbound.getMessage().ensureMetadata().ensureClusterRoute().setFanoutTargets(null);
-            if (isRemoteLoginNotify(outbound)) {
+            if (isSessionKickNotify(outbound)) {
                 MessageSender.sendControl(ctx, outbound).whenComplete((unused, error) -> {
                     if (ctx.channel() != null && ctx.channel().isActive()) {
                         ctx.close();
@@ -1059,10 +1059,15 @@ public class ClientHelper {
     }
 
     /**
-     * 跨节点顶号通知：写出后必须关掉本机旧 Channel，避免幽灵在线。
+     * 同设备(-9) / 异设备(-10) 踢线：写出后必须关掉本机旧 Channel，避免幽灵在线。
+     * 节点维护重连也复用 -10，写出后同样关闭。
      */
-    static boolean isRemoteLoginNotify(Packet packet) {
-        return packet != null && packet.getMessage() != null
-                && packet.getMessage().getContentType() == MessageContentTypeEnum.REMOTE_LOGIN_CONTENT.getType();
+    static boolean isSessionKickNotify(Packet packet) {
+        if (packet == null || packet.getMessage() == null) {
+            return false;
+        }
+        int contentType = packet.getMessage().getContentType();
+        return contentType == MessageContentTypeEnum.DUPLICATE_LOGIN_CONTENT.getType()
+                || contentType == MessageContentTypeEnum.REMOTE_LOGIN_CONTENT.getType();
     }
 }
