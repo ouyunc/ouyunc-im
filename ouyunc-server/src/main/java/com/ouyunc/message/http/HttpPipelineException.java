@@ -10,11 +10,19 @@ public final class HttpPipelineException extends Exception {
 
     private final HttpResponseStatus status;
     private final HttpResponseCodeEnum codeEnum;
+    /** 逐消息业务码，例如内容审核繁忙 40012。空则由受理层按状态填默认码。 */
+    private final Integer businessCode;
 
     public HttpPipelineException(HttpResponseStatus status, HttpResponseCodeEnum codeEnum, String message) {
+        this(status, codeEnum, message, null);
+    }
+
+    public HttpPipelineException(HttpResponseStatus status, HttpResponseCodeEnum codeEnum, String message,
+                                 Integer businessCode) {
         super(message);
         this.status = status;
         this.codeEnum = codeEnum;
+        this.businessCode = businessCode;
     }
 
     public HttpResponseStatus getStatus() {
@@ -23,5 +31,12 @@ public final class HttpPipelineException extends Exception {
 
     public HttpResponseCodeEnum getCodeEnum() {
         return codeEnum;
+    }
+
+    /**
+     * @return 逐消息业务码，未指定时为 null
+     */
+    public Integer getBusinessCode() {
+        return businessCode;
     }
 }

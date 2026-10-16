@@ -36,7 +36,9 @@ public final class ContentSafetyIngress {
             if (ContentSafetyFacade.allowOnFailure(packet, e)) {
                 return true;
             }
-            MessageSubmissionResponseHelper.retryLater(ctx, packet, ExceptionCodeEnum.UNKNOWN_ERROR);
+            ExceptionCodeEnum code = ContentSafetyUnavailableException.causedBy(e)
+                    ? ExceptionCodeEnum.CONTENT_SAFETY_BUSY : ExceptionCodeEnum.UNKNOWN_ERROR;
+            MessageSubmissionResponseHelper.retryLater(ctx, packet, code);
             return false;
         }
         if (result != null && !result.isPassed()) {

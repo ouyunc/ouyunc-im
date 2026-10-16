@@ -152,6 +152,20 @@ ouyunc:
       default-text-action: MASK
       # SEND_THEN_REVIEW | HOLD
       default-media-action: SEND_THEN_REVIEW
+      # 文本厂商：NONE | TENCENT | ALIYUN | SHUMEI。默认不调用第三方。
+      # TENCENT 走腾讯云 TextModeration。ALIYUN、SHUMEI 已占位，配上后返回 40012，不会放行。
+      # 密钥写在 text-vendor.tencent.secret-id / secret-key，不要提交到仓库。
+      # 本地词库未拒绝时才调用。Block、Review 按 40010 拒绝；超时、限流、网络故障按 40012 暂缓。
+      # 腾讯 SDK 的连接和读超时单位是秒，timeout-ms 不足 1 秒时按 1 秒执行。
+      text-vendor:
+        provider: NONE
+        timeout-ms: 800
+        tencent:
+          secret-id:
+          secret-key:
+          region: ap-guangzhou
+          biz-type:
+          endpoint: tms.tencentcloudapi.com
     # 客户端登录信息保存模式， FOREVER-永久， FINITE-有限； 默认值永久
     # 消息监听器包扫描路径
     listeners:

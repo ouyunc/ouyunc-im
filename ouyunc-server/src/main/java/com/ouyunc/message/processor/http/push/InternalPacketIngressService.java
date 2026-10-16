@@ -20,6 +20,7 @@ import com.ouyunc.message.http.HttpPipelineException;
 import com.ouyunc.message.processor.http.push.delivery.HttpPushDeliverySupport;
 import com.ouyunc.message.ratelimit.HttpPushAdmission;
 import com.ouyunc.message.safety.ContentSafetyFacade;
+import com.ouyunc.message.safety.ContentSafetyUnavailableException;
 import io.netty.handler.codec.http.HttpResponseStatus;
 import org.apache.commons.lang3.StringUtils;
 import org.slf4j.Logger;
@@ -304,7 +305,7 @@ public final class InternalPacketIngressService {
             }
             MessageSubmissionStatusEnum rejectedStatus = ex.getStatus().code() >= HttpResponseStatus.INTERNAL_SERVER_ERROR.code()
                     ? MessageSubmissionStatusEnum.RETRY_LATER : MessageSubmissionStatusEnum.REJECTED;
-            return HttpResponseResult.success(buildResponse(messageId, null, rejectedStatus, ex.getMessage()));
+            return HttpResponseResult.success(buildResponse(messageId, null, rejectedStatus, ex.getMessage(), ex.getBusinessCode()));
         }
 
         return claimAndExecute(packet, appKey, messageId, packetIdStr);
@@ -439,8 +440,11 @@ public final class InternalPacketIngressService {
             if (ContentSafetyFacade.allowOnFailure(packet, e)) {
                 return;
             }
+            Integer businessCode = ContentSafetyUnavailableException.causedBy(e)
+                    ? ExceptionCodeEnum.CONTENT_SAFETY_BUSY.getCode() : null;
             throw new HttpPipelineException(HttpResponseStatus.SERVICE_UNAVAILABLE,
-                    HttpResponseCodeEnum.INTERNAL_SERVER_ERROR, "内容安全检查暂不可用，请使用同一 messageId 重试");
+                    HttpResponseCodeEnum.INTERNAL_SERVER_ERROR, "内容安全检查暂不可用，请使用同一 messageId 重试",
+                    businessCode);
         }
         if (result != null && !result.isPassed()) {
             throw new HttpPipelineException(HttpResponseStatus.BAD_REQUEST, HttpResponseCodeEnum.BAD_REQUEST,
@@ -461,12 +465,20 @@ public final class InternalPacketIngressService {
 
     private static MessagePushResponse buildResponse(String messageId, String packetId,
                                                      MessageSubmissionStatusEnum status, String errorMessage) {
+        return buildResponse(messageId, packetId, status, errorMessage, null);
+    }
+
+    private static MessagePushResponse buildResponse(String messageId, String packetId,
+                                                     MessageSubmissionStatusEnum status, String errorMessage,
+                                                     Integer businessCode) {
         MessagePushResponse response = new MessagePushResponse();
         response.setMessageId(messageId);
         response.setPacketId(status == MessageSubmissionStatusEnum.ACCEPTED ? packetId : null);
         response.setStatus(status.name());
         if (status == MessageSubmissionStatusEnum.REJECTED) {
             response.setCode(ExceptionCodeEnum.MESSAGE_SEND_BUSINESS_REJECT.getCode());
+        } else if (businessCode != null) {
+            response.setCode(businessCode);
         } else if (status != MessageSubmissionStatusEnum.ACCEPTED) {
             response.setCode(ExceptionCodeEnum.UNKNOWN_ERROR.getCode());
         }

@@ -440,6 +440,38 @@ public class MessageServerProperties extends MessageProperties {
     @Key(value = "ouyunc.message.content-safety.default-media-action", defaultValue = "SEND_THEN_REVIEW")
     String contentSafetyDefaultMediaAction;
 
+    /**
+     * 文本审核厂商：NONE / TENCENT / ALIYUN / SHUMEI。NONE 不调用第三方。
+     */
+    @Key(value = "ouyunc.message.content-safety.text-vendor.provider", defaultValue = "NONE")
+    String textVendorProvider;
+
+    /** 腾讯云 SecretId，来自配置 ouyunc.message.content-safety.text-vendor.tencent.secret-id。 */
+    @Key(value = "ouyunc.message.content-safety.text-vendor.tencent.secret-id", defaultValue = "")
+    String tencentTmsSecretId;
+
+    /** 腾讯云 SecretKey，来自配置 ouyunc.message.content-safety.text-vendor.tencent.secret-key。 */
+    @Key(value = "ouyunc.message.content-safety.text-vendor.tencent.secret-key", defaultValue = "")
+    String tencentTmsSecretKey;
+
+    /** 腾讯云地域，如 ap-guangzhou。 */
+    @Key(value = "ouyunc.message.content-safety.text-vendor.tencent.region", defaultValue = "ap-guangzhou")
+    String tencentTmsRegion;
+
+    /** 控制台策略编号 BizType，空则使用腾讯云账号默认策略。 */
+    @Key(value = "ouyunc.message.content-safety.text-vendor.tencent.biz-type", defaultValue = "")
+    String tencentTmsBizType;
+
+    /** 腾讯文本审核域名。 */
+    @Key(value = "ouyunc.message.content-safety.text-vendor.tencent.endpoint", defaultValue = "tms.tencentcloudapi.com")
+    String tencentTmsEndpoint;
+
+    /**
+     * 文本厂商调用超时毫秒。腾讯 SDK 超时单位是秒，不足 1 秒按 1 秒。
+     */
+    @Key(value = "ouyunc.message.content-safety.text-vendor.timeout-ms", defaultValue = "800")
+    int textVendorTimeoutMs;
+
     /***
      * 是否开启 QoS 重试。默认开启；须同时 qos.enable=true 且 qos.mode=SERVER 才登记下行重试。
      */
@@ -1305,6 +1337,55 @@ public class MessageServerProperties extends MessageProperties {
         this.contentSafetyDefaultMediaAction = contentSafetyDefaultMediaAction;
     }
 
+    /**
+     * @return 文本审核厂商，空配置按 NONE
+     */
+    public String getTextVendorProvider() {
+        return textVendorProvider;
+    }
+
+    /**
+     * @return 腾讯云 SecretId，可能为空
+     */
+    public String getTencentTmsSecretId() {
+        return tencentTmsSecretId;
+    }
+
+    /**
+     * @return 腾讯云 SecretKey，可能为空
+     */
+    public String getTencentTmsSecretKey() {
+        return tencentTmsSecretKey;
+    }
+
+    /**
+     * @return 腾讯云地域
+     */
+    public String getTencentTmsRegion() {
+        return tencentTmsRegion;
+    }
+
+    /**
+     * @return 策略编号，可能为空
+     */
+    public String getTencentTmsBizType() {
+        return tencentTmsBizType;
+    }
+
+    /**
+     * @return 文本审核域名
+     */
+    public String getTencentTmsEndpoint() {
+        return tencentTmsEndpoint;
+    }
+
+    /**
+     * @return 文本厂商调用超时毫秒
+     */
+    public int getTextVendorTimeoutMs() {
+        return textVendorTimeoutMs;
+    }
+
     public int getServerLoginTimeout() {
         return serverLoginTimeout;
     }
@@ -1558,6 +1639,9 @@ public class MessageServerProperties extends MessageProperties {
                 ", contentSafetyEnable=" + contentSafetyEnable +
                 ", contentSafetyDefaultTextAction='" + contentSafetyDefaultTextAction + '\'' +
                 ", contentSafetyDefaultMediaAction='" + contentSafetyDefaultMediaAction + '\'' +
+                ", textVendorProvider='" + textVendorProvider + '\'' +
+                ", tencentTmsRegion='" + tencentTmsRegion + '\'' +
+                ", textVendorTimeoutMs=" + textVendorTimeoutMs +
                 ", qosRetryEnable=" + qosRetryEnable +
                 ", qosRetryInitialDelay=" + qosRetryInitialDelay +
                 ", qosRetryPeriod=" + qosRetryPeriod +

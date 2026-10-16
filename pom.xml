@@ -89,6 +89,7 @@
     <bcprov.version>1.78.1</bcprov.version>
     <jjwt.version>0.12.6</jjwt.version>
     <okhttp.version>4.12.0</okhttp.version>
+    <tencentcloud-sdk.version>3.1.1276</tencentcloud-sdk.version>
     <junit.version>5.11.4</junit.version>
     <!-- 配置中心：仅 ouyunc-config-zk 使用，Nacos 走 Open API，不引入 nacos-client，避免和 Netty 4.2 冲突 -->
     <curator.version>5.7.1</curator.version>
@@ -502,6 +503,11 @@
         <groupId>com.squareup.okhttp3</groupId>
         <artifactId>okhttp</artifactId>
         <version>${okhttp.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>com.tencentcloudapi</groupId>
+        <artifactId>tencentcloud-sdk-java-tms</artifactId>
+        <version>${tencentcloud-sdk.version}</version>
       </dependency>
       <dependency>
         <groupId>org.apache.curator</groupId>

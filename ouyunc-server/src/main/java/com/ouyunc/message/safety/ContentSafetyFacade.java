@@ -22,8 +22,10 @@ import java.util.List;
 
 /**
  * 内容安全统一入口（WS / 原生 Packet / HTTP Push 共用）。
- * <p>P0：文本/图文说明做敏感词 MASK、REJECT、AUDIT_ONLY；图片视频仅打 metadata 标记，监黄闭环见 P1。
- * 生产日志只打 hits，不打原文全文。</p>
+ * <p>文本先走本地词库。未直接拒绝时，按 text-vendor.provider 选择厂商。
+ * 腾讯云已接入。阿里云、数美已占位，配上后暂缓受理，不会放行。
+ * 超时和故障抛出不可用，由入口返回 40012。
+ * 图片视频仅打 metadata 标记，监黄闭环见 P1。生产日志只打命中信息，不打原文全文。</p>
  */
 public final class ContentSafetyFacade {
 
@@ -41,6 +43,12 @@ public final class ContentSafetyFacade {
      * 降级结果记录于日志，不记录消息原文；与内容命中 REJECT 明确区分。
      */
     public static boolean allowOnFailure(Packet packet, Exception failure) {
+        if (ContentSafetyUnavailableException.causedBy(failure)) {
+            Long packetId = packet == null ? null : packet.getPacketId();
+            String messageId = packet == null || packet.getMessage() == null ? null : packet.getMessage().getId();
+            log.error("文本审核服务不可用，暂缓受理 packetId={} messageId={}", packetId, messageId);
+            return false;
+        }
         boolean failOpen = false;
         try {
             String appKey = packet.getMessage().getMetadata().getIngress().getAppKey();
@@ -130,10 +138,7 @@ public final class ContentSafetyFacade {
         }
         SensitiveWordAcAutomaton matcher = registry.matcher(appKey);
         List<String> hits = matcher.findAll(text);
-        if (hits.isEmpty()) {
-            return ContentSafetyResult.pass();
-        }
-        return applyTextAction(message, null, text, hits, policy, matcher);
+        return finishTextCheck(message, null, text, hits, policy, matcher);
     }
 
     /**
@@ -166,10 +171,34 @@ public final class ContentSafetyFacade {
         }
         SensitiveWordAcAutomaton matcher = registry.matcher(appKey);
         List<String> hits = matcher.findAll(body.getText());
+        return finishTextCheck(message, body, body.getText(), hits, policy, matcher);
+    }
+
+    /**
+     * 本地词库若已是拒绝，不再请求第三方。否则先做腾讯文本审核，通过后再按租户策略打码或放行。
+     *
+     * @param message   消息
+     * @param imageText 图文结构，纯文本为 null
+     * @param text      待审核原文
+     * @param hits      本地命中词
+     * @param policy    策略
+     * @param matcher   自动机
+     * @return 检查结果；第三方不可用时抛出 {@link ContentSafetyUnavailableException}
+     */
+    private static ContentSafetyResult finishTextCheck(Message message, ImageTextContent imageText, String text,
+                                                        List<String> hits, ContentSafetyPolicy policy,
+                                                        SensitiveWordAcAutomaton matcher) {
+        if (!hits.isEmpty() && policy.getTextAction() == ContentSafetyAction.REJECT) {
+            return applyTextAction(message, imageText, text, hits, policy, matcher);
+        }
+        ContentSafetyResult vendor = TextModerationStrategies.moderate(text, message.getId());
+        if (vendor != null) {
+            return vendor;
+        }
         if (hits.isEmpty()) {
             return ContentSafetyResult.pass();
         }
-        return applyTextAction(message, body, body.getText(), hits, policy, matcher);
+        return applyTextAction(message, imageText, text, hits, policy, matcher);
     }
 
     /**
