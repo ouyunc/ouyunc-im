@@ -619,9 +619,19 @@ public class ClientHelper {
         if (StringUtils.isAnyBlank(appKey, identity)) {
             return;
         }
-        RouteIdentityKey identityKey = new RouteIdentityKey(appKey, identity);
-        ROUTE_SNAPSHOT_CACHE.invalidate(identityKey);
+        invalidateRouteSnapshot(appKey, identity);
         ROUTE_DEVICE_CACHE.invalidate(new RouteDeviceKey(appKey, identity, deviceType));
+    }
+
+    /**
+     * 丢掉本机登录路由快照。在线查询得到空结果时先失效再查一次，
+     * 避免 500ms 负缓存把刚上线的访客或坐席判成离线，关单和进线通知被直接丢弃。
+     */
+    public static void invalidateRouteSnapshot(String appKey, String identity) {
+        if (StringUtils.isAnyBlank(appKey, identity)) {
+            return;
+        }
+        ROUTE_SNAPSHOT_CACHE.invalidate(new RouteIdentityKey(appKey, identity));
     }
 
     private static Map<Byte, String> parseRoutes(Map<?, ?> rawRoutes) {

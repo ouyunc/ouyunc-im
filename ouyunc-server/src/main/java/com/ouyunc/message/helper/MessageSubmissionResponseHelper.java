@@ -35,19 +35,27 @@ public final class MessageSubmissionResponseHelper {
     private MessageSubmissionResponseHelper() { }
 
     public static void accepted(ChannelHandlerContext ctx, Packet source) {
-        send(ctx, source, MessageSubmissionStatusEnum.ACCEPTED, null, null);
+        send(ctx, source, MessageSubmissionStatusEnum.ACCEPTED, null, null, null);
     }
 
     public static void rejected(ChannelHandlerContext ctx, Packet source, ExceptionCodeEnum code) {
-        send(ctx, source, MessageSubmissionStatusEnum.REJECTED, code, null);
+        send(ctx, source, MessageSubmissionStatusEnum.REJECTED, code, null, null);
+    }
+
+    /**
+     * 业务拒绝。description 用具体原因（例如咨询单已关闭），调用方才能立刻关本地会话，
+     * 而不是只看到笼统的「客服会话路由校验失败」后继续等轮询。
+     */
+    public static void rejected(ChannelHandlerContext ctx, Packet source, ExceptionCodeEnum code, String description) {
+        send(ctx, source, MessageSubmissionStatusEnum.REJECTED, code, null, description);
     }
 
     public static void retryLater(ChannelHandlerContext ctx, Packet source, ExceptionCodeEnum code) {
-        send(ctx, source, MessageSubmissionStatusEnum.RETRY_LATER, code, null);
+        send(ctx, source, MessageSubmissionStatusEnum.RETRY_LATER, code, null, null);
     }
 
     public static void unknown(ChannelHandlerContext ctx, Packet source, ExceptionCodeEnum code) {
-        send(ctx, source, MessageSubmissionStatusEnum.UNKNOWN, code, null);
+        send(ctx, source, MessageSubmissionStatusEnum.UNKNOWN, code, null, null);
     }
 
     /**
@@ -55,7 +63,7 @@ public final class MessageSubmissionResponseHelper {
      * 只有连接仍可用时才发送；连接断开后的最终状态由同 ID 重试核对。
      */
     private static void send(ChannelHandlerContext ctx, Packet source, MessageSubmissionStatusEnum status,
-                             ExceptionCodeEnum code, Long retryAfterMs) {
+                             ExceptionCodeEnum code, Long retryAfterMs, String descriptionOverride) {
         if (source == null || source.getMessage() == null || ctx == null) {
             return;
         }
@@ -73,10 +81,13 @@ public final class MessageSubmissionResponseHelper {
         reply.setTo(target != null ? target.getTargetIdentity() : original.getFrom());
         reply.setQos(QosLevelEnum.QOS_0.getLevel());
         try {
+            String description = StringUtils.isNotBlank(descriptionOverride)
+                    ? descriptionOverride
+                    : (code == null ? null : code.getMessage());
             reply.setContent(JSON.writeValueAsString(new MessageSubmissionResponseContent(original.getId(),
                     status == MessageSubmissionStatusEnum.ACCEPTED ? String.valueOf(source.getPacketId()) : null,
                     status.name(), code == null ? null : code.getCode(),
-                    code == null ? null : code.getMessage(), retryAfterMs)));
+                    description, retryAfterMs)));
         } catch (JsonProcessingException error) {
             log.error("消息提交响应序列化失败, messageId={}", original.getId(), error);
             return;

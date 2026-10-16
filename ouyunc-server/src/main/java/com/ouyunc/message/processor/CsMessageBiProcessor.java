@@ -96,7 +96,8 @@ public final class CsMessageBiProcessor extends AbstractMessageBiProcessor<Byte>
                 MessageServerContext.messageContentProcessorCache.get(packet.getMessage().getContentType());
         PrepareOutcome prepared = validateAndPrepare(packet);
         if (!prepared.accepted()) {
-            MessageSubmissionResponseHelper.rejected(ctx, packet, ExceptionCodeEnum.CS_SESSION_ROUTE_ERROR);
+            MessageSubmissionResponseHelper.rejected(ctx, packet, ExceptionCodeEnum.CS_SESSION_ROUTE_ERROR,
+                    prepared.rejectReason());
             return Mono.empty();
         }
         PrepareOutcome live = CsHelper.refreshDelivery(packet, prepared.route());
@@ -104,7 +105,8 @@ public final class CsMessageBiProcessor extends AbstractMessageBiProcessor<Byte>
             log.warn("客服投递前路由刷新失败: {} | packetId={}", live.rejectReason(), packet.getPacketId());
             CsHelper.publishReject(packet, live.rejectReason());
             MessageAcceptPipelineHelper.releaseQosOnFailure(packet);
-            MessageSubmissionResponseHelper.rejected(ctx, packet, ExceptionCodeEnum.CS_SESSION_ROUTE_ERROR);
+            MessageSubmissionResponseHelper.rejected(ctx, packet, ExceptionCodeEnum.CS_SESSION_ROUTE_ERROR,
+                    live.rejectReason());
             return Mono.empty();
         }
         // 引用和路由都通过后再做内容安全，与单聊/群聊一致；拒绝时不再归档。

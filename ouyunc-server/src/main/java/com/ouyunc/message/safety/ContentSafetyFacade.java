@@ -41,8 +41,9 @@ public final class ContentSafetyFacade {
     }
 
     /**
-     * 客服会话控制通知：messageType 为 SERVER_NOTIFY，正文是带 event 的 JSON。
-     * 这类报文不是用户聊天文本。客户端伪造的 SERVER_NOTIFY 在 preProcess 就会被拒绝，到不了这里。
+     * 带 event 的系统通知不是用户聊天文本。关单、分配、排队都是这种 JSON。
+     * 送去第三方审核时，鉴权失败或超时会把在线通知拖成数秒甚至直接丢弃。
+     * 不带 event 的纯文本通知仍送审。客户端伪造的 SERVER_NOTIFY 在 preProcess 就会被拒绝。
      *
      * @param packet 协议包
      * @return true 时直接放行，不访问词库和第三方
