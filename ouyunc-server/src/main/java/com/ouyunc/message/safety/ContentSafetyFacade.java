@@ -98,10 +98,10 @@ public final class ContentSafetyFacade {
 
         // 文本 / 图文说明
         if (contentType == MessageContentTypeEnum.TEXT_CONTENT.getType()) {
-            return checkPlainText(message, appKey, policy, registry);
+            return checkPlainText(packet, appKey, policy, registry);
         }
         if (contentType == MessageContentTypeEnum.IMAGE_TEXT_CONTENT.getType()) {
-            return checkImageText(message, appKey, policy, registry);
+            return checkImageText(packet, appKey, policy, registry);
         }
 
         // 媒体：P0 放行，写标记供 P1 监黄使用
@@ -120,64 +120,66 @@ public final class ContentSafetyFacade {
     /**
      * 纯文本敏感词检查。
      *
-     * @param message  消息
+     * @param packet   协议包，正文和 packetId 都从包上取
      * @param appKey   租户
      * @param policy   策略
      * @param registry 词库注册表
      * @return 检查结果
      */
-    private static ContentSafetyResult checkPlainText(Message message, String appKey,
+    private static ContentSafetyResult checkPlainText(Packet packet, String appKey,
                                                       ContentSafetyPolicy policy,
                                                       ContentSafetyRegistry registry) {
         if (!policy.isTextEnabled()) {
             return ContentSafetyResult.pass();
         }
+        Message message = packet.getMessage();
         String text = message.getContent();
         if (StringUtils.isBlank(text)) {
             return ContentSafetyResult.pass();
         }
         SensitiveWordAcAutomaton matcher = registry.matcher(appKey);
         List<String> hits = matcher.findAll(text);
-        return finishTextCheck(message, null, text, hits, policy, matcher);
+        return finishTextCheck(packet, null, text, hits, policy, matcher);
     }
 
     /**
      * 图文消息中的说明文字敏感词检查。
      *
-     * @param message  消息
+     * @param packet   协议包，正文和 packetId 都从包上取
      * @param appKey   租户
      * @param policy   策略
      * @param registry 词库注册表
      * @return 检查结果
      */
-    private static ContentSafetyResult checkImageText(Message message, String appKey,
+    private static ContentSafetyResult checkImageText(Packet packet, String appKey,
                                                       ContentSafetyPolicy policy,
                                                       ContentSafetyRegistry registry) {
         if (!policy.isTextEnabled()) {
             return ContentSafetyResult.pass();
         }
+        Message message = packet.getMessage();
         ImageTextContent body;
         try {
             body = JSON.parseObject(message.getContent(), ImageTextContent.class);
         } catch (Exception e) {
             log.warn("图文内容解析失败，按原文做敏感词 packetContentType={}", message.getContentType());
-            return checkPlainText(message, appKey, policy, registry);
+            return checkPlainText(packet, appKey, policy, registry);
         }
         if (body == null) {
-            return checkPlainText(message, appKey, policy, registry);
+            return checkPlainText(packet, appKey, policy, registry);
         }
         if (StringUtils.isBlank(body.getText())) {
             return ContentSafetyResult.pass();
         }
         SensitiveWordAcAutomaton matcher = registry.matcher(appKey);
         List<String> hits = matcher.findAll(body.getText());
-        return finishTextCheck(message, body, body.getText(), hits, policy, matcher);
+        return finishTextCheck(packet, body, body.getText(), hits, policy, matcher);
     }
 
     /**
      * 本地词库若已是拒绝，不再请求第三方。否则先做腾讯文本审核，通过后再按租户策略打码或放行。
      *
-     * @param message   消息
+     * @param packet    协议包，正文和 packetId 都从包上取
      * @param imageText 图文结构，纯文本为 null
      * @param text      待审核原文
      * @param hits      本地命中词
@@ -185,26 +187,26 @@ public final class ContentSafetyFacade {
      * @param matcher   自动机
      * @return 检查结果；第三方不可用时抛出 {@link ContentSafetyUnavailableException}
      */
-    private static ContentSafetyResult finishTextCheck(Message message, ImageTextContent imageText, String text,
+    private static ContentSafetyResult finishTextCheck(Packet packet, ImageTextContent imageText, String text,
                                                         List<String> hits, ContentSafetyPolicy policy,
                                                         SensitiveWordAcAutomaton matcher) {
         if (!hits.isEmpty() && policy.getTextAction() == ContentSafetyAction.REJECT) {
-            return applyTextAction(message, imageText, text, hits, policy, matcher);
+            return applyTextAction(packet, imageText, text, hits, policy, matcher);
         }
-        ContentSafetyResult vendor = TextModerationStrategies.moderate(text, message.getId());
+        ContentSafetyResult vendor = TextModerationStrategies.moderate(text, String.valueOf(packet.getPacketId()));
         if (vendor != null) {
             return vendor;
         }
         if (hits.isEmpty()) {
             return ContentSafetyResult.pass();
         }
-        return applyTextAction(message, imageText, text, hits, policy, matcher);
+        return applyTextAction(packet, imageText, text, hits, policy, matcher);
     }
 
     /**
      * 按租户文本动作处理命中：REJECT / AUDIT_ONLY / MASK（默认）。
      *
-     * @param message      消息（MASK 时原地改写 content）
+     * @param packet       协议包（MASK 时原地改写 message.content）
      * @param imageText    图文结构，非图文为 null
      * @param originalText 待处理原文
      * @param hits         命中词
@@ -212,10 +214,11 @@ public final class ContentSafetyFacade {
      * @param matcher      自动机（用于 MASK）
      * @return 检查结果
      */
-    private static ContentSafetyResult applyTextAction(Message message, ImageTextContent imageText,
+    private static ContentSafetyResult applyTextAction(Packet packet, ImageTextContent imageText,
                                                        String originalText, List<String> hits,
                                                        ContentSafetyPolicy policy,
                                                        SensitiveWordAcAutomaton matcher) {
+        Message message = packet.getMessage();
         ContentSafetyAction action = policy.getTextAction();
         log.info("敏感词命中 appKey={} action={} hits={}",
                 message.getMetadata() == null ? null : message.getMetadata().getIngress().getAppKey(),

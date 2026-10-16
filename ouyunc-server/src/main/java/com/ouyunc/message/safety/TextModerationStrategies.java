@@ -24,7 +24,7 @@ public final class TextModerationStrategies {
      * 按当前配置审核。未启用时返回 null。
      *
      * @param text   原文
-     * @param dataId 业务消息 ID
+     * @param dataId 报文 packetId
      * @return 拒绝结果；不审核或厂商通过时返回 null
      */
     public static ContentSafetyResult moderate(String text, String dataId) {

@@ -18,7 +18,7 @@ public interface TextModerationStrategy {
      * 审核原文。
      *
      * @param text   非空白正文
-     * @param dataId 业务消息 ID，只用于厂商对账
+     * @param dataId 报文 packetId，只用于厂商对账
      * @return 拒绝结果；通过返回 null
      */
     ContentSafetyResult moderate(String text, String dataId);

@@ -66,7 +66,7 @@ public final class TencentTextModerator implements TextModerationStrategy {
      * 审核一段文本。由 {@link TextModerationStrategies} 在厂商为 TENCENT 时调用。
      *
      * @param text   原文。调用方保证非空白
-     * @param dataId 业务消息 ID，只用于腾讯侧对账
+     * @param dataId 报文 packetId，只用于腾讯侧对账
      * @return 拒绝结果；通过时返回 null
      */
     @Override
@@ -123,7 +123,7 @@ public final class TencentTextModerator implements TextModerationStrategy {
     /**
      * 收成腾讯 DataId 允许的字符，超长截断。
      *
-     * @param raw 原始消息 ID
+     * @param raw 报文 packetId
      * @return 合法 DataId，无法构造时返回 null
      */
     static String dataId(String raw) {

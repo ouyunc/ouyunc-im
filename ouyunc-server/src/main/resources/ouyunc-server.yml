@@ -164,7 +164,7 @@ ouyunc:
           secret-id:
           secret-key:
           region: ap-guangzhou
-          biz-type:
+          biz-type: content_input
           endpoint: tms.tencentcloudapi.com
     # 客户端登录信息保存模式， FOREVER-永久， FINITE-有限； 默认值永久
     # 消息监听器包扫描路径
