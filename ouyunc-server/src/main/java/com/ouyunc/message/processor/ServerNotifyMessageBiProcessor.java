@@ -1,16 +1,14 @@
 package com.ouyunc.message.processor;
 
 import com.ouyunc.base.constant.MessageConstant;
-import com.ouyunc.base.constant.enums.MessageContentTypeEnum;
-import com.ouyunc.base.constant.enums.MessageType;
-import com.ouyunc.base.constant.enums.MessageTypeEnum;
-import com.ouyunc.base.constant.enums.PushTypeEnum;
+import com.ouyunc.base.constant.enums.*;
 import com.ouyunc.base.model.LoginClientInfo;
 import com.ouyunc.base.model.Metadata;
 import com.ouyunc.base.packet.Packet;
 import com.ouyunc.base.packet.message.Message;
 import com.ouyunc.message.helper.ClientHelper;
 import com.ouyunc.message.helper.MessageDeliveryPlanner;
+import com.ouyunc.message.helper.MessageSubmissionResponseHelper;
 import io.netty.channel.ChannelHandlerContext;
 import org.apache.commons.collections4.CollectionUtils;
 import org.slf4j.Logger;
@@ -36,8 +34,8 @@ public final class ServerNotifyMessageBiProcessor extends AbstractMessageBiProce
     @Override
     public Mono<Boolean> preProcess(ChannelHandlerContext ctx, Packet packet) {
         // 客户端三阶段入口不得发送服务端通知；内部及已授权 HTTP 入口直接调用 process。
-        com.ouyunc.message.helper.MessageSubmissionResponseHelper.rejected(ctx, packet,
-                com.ouyunc.base.constant.enums.ExceptionCodeEnum.MESSAGE_SEND_BUSINESS_REJECT);
+        MessageSubmissionResponseHelper.rejected(ctx, packet,
+                ExceptionCodeEnum.MESSAGE_SEND_BUSINESS_REJECT);
         return Mono.just(false);
     }
 
