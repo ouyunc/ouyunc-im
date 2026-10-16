@@ -1,11 +1,13 @@
 package com.ouyunc.message.safety;
 
 import com.alibaba.fastjson2.JSON;
+import com.alibaba.fastjson2.JSONObject;
 import com.ouyunc.base.constant.CacheConstant;
 import com.ouyunc.base.constant.enums.ContentSafetyAction;
 import com.ouyunc.base.constant.enums.ContentSafetyHitType;
 import com.ouyunc.base.constant.enums.ContentSafetyReasonEnum;
 import com.ouyunc.base.constant.enums.MessageContentTypeEnum;
+import com.ouyunc.base.constant.enums.MessageTypeEnum;
 import com.ouyunc.base.constant.enums.ModerationModeEnum;
 import com.ouyunc.base.constant.enums.ModerationStatusEnum;
 import com.ouyunc.base.model.ContentSafetyPolicy;
@@ -36,6 +38,29 @@ public final class ContentSafetyFacade {
      * 工具类，禁止实例化。
      */
     private ContentSafetyFacade() {
+    }
+
+    /**
+     * 客服会话控制通知：messageType 为 SERVER_NOTIFY，正文是带 event 的 JSON。
+     * 这类报文不是用户聊天文本。客户端伪造的 SERVER_NOTIFY 在 preProcess 就会被拒绝，到不了这里。
+     *
+     * @param packet 协议包
+     * @return true 时直接放行，不访问词库和第三方
+     */
+    private static boolean isSessionControlNotify(Packet packet) {
+        if (packet.getMessageType() != MessageTypeEnum.SERVER_NOTIFY.getType()) {
+            return false;
+        }
+        String content = packet.getMessage().getContent();
+        if (StringUtils.isBlank(content) || !content.trim().startsWith("{")) {
+            return false;
+        }
+        try {
+            JSONObject body = JSON.parseObject(content);
+            return body != null && StringUtils.isNotBlank(body.getString("event"));
+        } catch (RuntimeException ignored) {
+            return false;
+        }
     }
 
     /**
@@ -73,6 +98,11 @@ public final class ContentSafetyFacade {
         }
         int contentType = packet.getMessage().getContentType();
         // 已读、撤回等控制命令无需审核正文，不应被词库冷启动或审核故障阻断。
+        // 关单/转接/托管等 SERVER_NOTIFY 的 pushType=0，正文类型仍是 TEXT。
+        // 若送去第三方审核，鉴权失败或超时时 HTTP 推送被拒，在线端只能等轮询。
+        if (isSessionControlNotify(packet)) {
+            return ContentSafetyResult.pass();
+        }
         if (contentType != MessageContentTypeEnum.TEXT_CONTENT.getType()
                 && contentType != MessageContentTypeEnum.IMAGE_TEXT_CONTENT.getType()
                 && contentType != MessageContentTypeEnum.IMAGE_CONTENT.getType()
