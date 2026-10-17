@@ -117,11 +117,12 @@ public class MqConstant {
     public static final String MQ_TRANSLATE_MESSAGE_GROUP = "message_translate";
 
     /**
-     * 译文 MySQL 异步刷盘。Mongo 热数据先写成功后再投此 topic，失败只重试写库。
+     * 译文落库队列。发送成功后才通知对端；消费者再写入 Mongo 与 MySQL。
+     * 开发环境前缀后为 test_message_translate_persist。
      */
-    public static final String MQ_TRANSLATE_MYSQL_GROUP = "message_translate_mysql";
+    public static final String MQ_TRANSLATE_PERSIST_GROUP = "message_translate_persist";
 
-    public static final String MQ_TRANSLATE_MYSQL_TOPIC = MQ_TRANSLATE_MYSQL_GROUP;
+    public static final String MQ_TRANSLATE_PERSIST_TOPIC = MQ_TRANSLATE_PERSIST_GROUP;
 
     /**
      * 外渠归档恢复消费组：独立消费 SAVE/WITHDRAW/READ 归档，不与 message_save 位点耦合。
@@ -166,7 +167,7 @@ public class MqConstant {
                 || MQ_GROUP_REQUEST_TOPIC.equals(logical)
                 || MQ_EXTERNAL_CHANNEL_OUTBOUND_TOPIC.equals(logical)
                 || MQ_CS_TICKET_ACTIVITY_TOPIC.equals(logical)
-                || MQ_TRANSLATE_MYSQL_TOPIC.equals(logical);
+                || MQ_TRANSLATE_PERSIST_TOPIC.equals(logical);
     }
 
 }
