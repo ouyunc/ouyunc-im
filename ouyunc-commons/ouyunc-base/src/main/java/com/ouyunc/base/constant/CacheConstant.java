@@ -808,6 +808,22 @@ public class CacheConstant {
         return buildAggregateCacheKey(appKey, sanitizeTranslateIp(clientIp)) + "translate:limit:ip" + COLON + epochMinute;
     }
 
+    /** 引擎失败短负缓存，与内容哈希同槽，按质量档分开，避免精翻失败挡住机器翻译。 */
+    public static String buildTranslateNegativeCacheKey(
+            String appKey, String sourceLang, String targetLang, String sha256, String quality) {
+        return buildTranslateContentCacheKey(appKey, sourceLang, targetLang, sha256) + ":neg" + COLON + quality;
+    }
+
+    /** 单条预译失败次数。槽 {@code {appKey:packetId}}。 */
+    public static String buildTranslateAttemptCacheKey(String appKey, String packetId, String language) {
+        return buildAggregateCacheKey(appKey, packetId) + "translate:attempt" + COLON + stripHashTagChars(language);
+    }
+
+    /** 群自动预译受众：field=语种，value=成员 id。槽 {@code {appKey:groupId}}。 */
+    public static String buildTranslateGroupAudienceCacheKey(String appKey, String groupId) {
+        return buildAggregateCacheKey(appKey, groupId) + "translate:group-audience";
+    }
+
     private static String sanitizeTranslateIp(String clientIp) {
         if (clientIp == null || clientIp.isBlank()) {
             return "unknown";
