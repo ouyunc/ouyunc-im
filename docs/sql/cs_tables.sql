@@ -135,7 +135,7 @@ CREATE TABLE IF NOT EXISTS `cs_consultation_ticket_log` (
     `channel` varchar(32) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NULL DEFAULT NULL COMMENT '进线渠道，冗余：whatsapp/telegram/line/im',
     `record_type` tinyint NOT NULL COMMENT '记录类型：1-首次接入，2-转接转入，3-转出（结束本次接待），4-关单',
     `operate_type` tinyint NULL DEFAULT NULL COMMENT '操作细分：1正常接待 2人工主动转接 3超时关闭 4客户离线关闭 5系统强制关单',
-    `assignee_id` varchar(64) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL COMMENT '本段处理人 id（坐席 identity）',
+    `assignee_id` varchar(64) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NULL DEFAULT NULL COMMENT '本段处理人 id（坐席 identity），未分配关单可为空',
     `assignee_name` varchar(64) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NULL DEFAULT NULL COMMENT '本段处理人昵称/工号',
     `is_robot` tinyint NULL DEFAULT 0 COMMENT '本段接待是否机器人：0-人工 1-机器人',
     `bot_flow_id` varchar(64) NULL DEFAULT NULL COMMENT '机器人接待流程ID，仅机器人接待时有值',

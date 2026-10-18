@@ -148,7 +148,7 @@ CREATE TABLE IF NOT EXISTS `cs_consultation_ticket_log` (
     `channel` varchar(32) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NULL DEFAULT NULL COMMENT '进线渠道',
     `record_type` tinyint NOT NULL COMMENT '1首次 2转入 3转出 4关单 5托管 6恢复 7idle提示 8SLA升级',
     `operate_type` tinyint NULL DEFAULT NULL COMMENT '1正常 2主动转接 3超时 4离线 5强制关单',
-    `assignee_id` varchar(64) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL COMMENT '本段处理人 id',
+    `assignee_id` varchar(64) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NULL DEFAULT NULL COMMENT '本段处理人 id，未分配关单可为空',
     `assignee_name` varchar(64) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NULL DEFAULT NULL COMMENT '本段处理人昵称',
     `is_robot` tinyint NULL DEFAULT 0 COMMENT '0-人工 1-机器人',
     `bot_flow_id` varchar(64) NULL DEFAULT NULL COMMENT '机器人流程ID',
