@@ -8,7 +8,6 @@ import com.ouyunc.message.ratelimit.ConnectionAdmission;
 import com.ouyunc.message.support.ProxyProtocolTrustSupport;
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.ChannelPipeline;
 import io.netty.channel.SimpleChannelInboundHandler;
 import io.netty.handler.codec.haproxy.HAProxyMessage;
 import io.netty.handler.codec.http.FullHttpRequest;
@@ -48,11 +47,9 @@ public class EphemeralRemoteClientRealIpHandler extends SimpleChannelInboundHand
                     }
                     ChannelAttrUtil.setChannelAttribute(ctx, MessageConstant.CHANNEL_ATTR_KEY_TAG_CLIENT_REAL_IP, clientRealIp);
                 }
-                ChannelPipeline pipeline = ctx.pipeline();
-                if (pipeline.get(MessageConstant.HA_PROXY_PROTOCOL_DECODER_HANDLER) != null) {
-                    // 摘掉 decoder，把 cumulation 里 PROXY 头之后的应用层字节交给后面的 ProtocolDispatcher
-                    pipeline.remove(MessageConstant.HA_PROXY_PROTOCOL_DECODER_HANDLER);
-                }
+                // 不要在这里 pipeline.remove(HAProxyMessageDecoder)：
+                // Netty 的 HAProxyMessageDecoder 在 channelRead 末尾会自行 remove(this)；
+                // 若此处先摘掉，解码器回栈再 remove 会抛 NoSuchElementException。
             } else if (msg instanceof FullHttpRequest request) {
                 // PROXY Protocol 的来源已经通过 TCP 对端校验，不能再被客户端可伪造的 HTTP 头覆盖。
                 String proxyProtocolIp = ChannelAttrUtil.getChannelAttribute(
