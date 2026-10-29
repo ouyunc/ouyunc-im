@@ -18,12 +18,12 @@
 1. 单聊：`MessageDeliveryRouter.deliverPeerMessage`
    - 查 `friend(sender, recipient).channel`
    - `IM` → 长连接推送到 recipient 所有在线设备
-   - 外渠 → Kafka `ouyunc_external_channel_outbound`（`ExternalChannelOutboundPayload`）
+   - 外渠 → Kafka `EXTERNAL_CHANNEL_OUTBOUND`（`ExternalChannelOutboundPayload`）
 2. 客服：`CsMessageDeliveryRouter.deliverCustomerServiceMessage`
    - **不查好友表**；坐席始终 IM 长连接
    - 访客按 Redis route Hash 的 `channelType`（与 `cs_consultation_ticket.channel_type` 对齐）：
      - `im` → IM 长连接
-     - `whatsapp` / `telegram` / `line` → Kafka `ouyunc_external_channel_outbound`
+     - `whatsapp` / `telegram` / `line` → Kafka `EXTERNAL_CHANNEL_OUTBOUND`
    - `channel` 只标识实例（`whatsapp_a`），不参与协议识别
 3. 群聊：按成员 `GroupUserEntity.channel` 分别 IM 推送或外渠 Kafka
 

@@ -1,0 +1,35 @@
+# 阿里云 RocketMQ 4.x 实例 im-mq（上海，标准版，按量付费）
+# 实例 ID：MQ_INST_1781595675723248_BaFOayyh
+# 协议：TCP Remoting。接入点写在 nameServers，不要改成 HTTP Endpoint，也不要改成 9876。
+#
+# 使用前在控制台完成：
+# 1. Topic 管理里创建业务 Topic（当前实例 Topic 数为 0，未创建前发送会失败）
+# 2. Group 管理里选择「TCP 协议」创建生产者组 GID_OUYUNC_IM_PRODUCER
+#    业务消费组由各订阅者自己拼，不写在这里。Topic 使用大写逻辑名，例如 MESSAGE_SAVE。
+#    测试环境前缀为 test 时，物理名是 TEST_MESSAGE_SAVE。
+# 3. 把 RAM 的 AccessKey / SecretKey 填到 accessKey、secretKey，只授予该实例的收发权限
+# 4. 业务配置里把 ouyunc.mq.type 改为 rocket
+
+ouyunc:
+  mq:
+    type: rocket
+    rocket:
+      # 与实例同一地域、同一 VPC 的服务用内网。进程不在该 VPC（本机、其他云）时改用下一行公网接入点。
+      # 公网会产生下行流量费。两种地址不要和 HTTP Endpoint 混用。
+      nameServers:
+        - http://xxxx.cn-shanghai.mq-internal.aliyuncs.com:8080
+        # - http://xxxx.mq.cn-shanghai.aliyuncs.com:80
+
+      # 阿里云没有 10909，必须显式关闭 VIP 通道。
+      vipChannelEnabled: false
+      accessKey:
+      secretKey:
+      # 4.x 实例 ID 已经在接入点域名里。不要填 namespace，否则 Topic / Group 会被加上实例前缀。
+
+      producer:
+        producerGroup: GID_OUYUNC_IM_PRODUCER
+        sendMsgTimeout: 3000
+        retryTimesWhenSendFailed: 2
+        retryTimesWhenSendAsyncFailed: 2
+        retryNextServer: true
+        maxMessageSize: 4194304
