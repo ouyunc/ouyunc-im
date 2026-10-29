@@ -1094,7 +1094,7 @@ public class MessageConstant {
             "长时间无操作，请发送任意消息以保持连接。";
 
     /**
-     * IM → CS 坐席通道 presence 事件类型（Kafka {@code ouyunc-cs-agent-presence}），
+     * IM → CS 坐席通道 presence 事件类型（topic {@code CS_AGENT_PRESENCE}），
      * 与 CS 侧 {@code CsAgentPresenceEventTypes} 取值一致。
      */
     public static final String CS_AGENT_PRESENCE_CHANNEL_CLOSE = "CHANNEL_CLOSE";

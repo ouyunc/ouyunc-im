@@ -5,7 +5,7 @@ import java.io.Serial;
 import java.io.Serializable;
 
 /**
- * CS ticket 活动 MQ 载荷（topic {@code ouyunc-cs-ticket-activity}），
+ * CS ticket 活动 MQ 载荷（topic {@code CS_TICKET_ACTIVITY}），
  * 与 CS 侧 {@code CsTicketActivityNotifyRequest} JSON 字段一致。
  */
 public class CsTicketActivityNotifyPayload implements Serializable {

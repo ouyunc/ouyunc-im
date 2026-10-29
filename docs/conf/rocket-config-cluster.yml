@@ -39,7 +39,7 @@ ouyunc:
 
 # 上面这份是以后自建 RocketMQ 集群用的，不要拿去替换当前阿里云实例 im-mq。
 # 阿里云实例继续用 docs/conf/rocket-config-aliyun.yml 里的那一个 TCP 接入点。
-# 多个 ouyunc-im 进程共用 GID_ouyunc_im_consumer，且 messageModel 为 CLUSTERING，消息在进程之间分摊。
+# 多个 ouyunc-im 进程共用同一个生产者组。消费组由各订阅者自己拼，例如 MESSAGE_SAVE、MESSAGE_TRANSLATE。
 # 规格不够时在控制台升配。换实例时把新的 TCP 接入点追加进 nameServers，vipChannelEnabled 保持 false。
 #
 # 自建集群：

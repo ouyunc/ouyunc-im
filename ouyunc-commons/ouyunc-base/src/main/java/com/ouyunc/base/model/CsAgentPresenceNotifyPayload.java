@@ -6,7 +6,7 @@ import java.io.Serial;
 import java.io.Serializable;
 
 /**
- * CS 坐席 IM 通道 presence MQ 载荷（topic {@code ouyunc-cs-agent-presence}），
+ * CS 坐席 IM 通道 presence MQ 载荷（topic {@code CS_AGENT_PRESENCE}），
  * 与 CS 侧 {@code CsAgentPresenceNotifyRequest} JSON 字段一致。
  */
 public class CsAgentPresenceNotifyPayload implements Serializable {
