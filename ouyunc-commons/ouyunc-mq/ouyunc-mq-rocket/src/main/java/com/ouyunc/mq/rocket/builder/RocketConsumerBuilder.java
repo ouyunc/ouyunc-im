@@ -3,6 +3,7 @@ package com.ouyunc.mq.rocket.builder;
 import com.ouyunc.mq.rocket.properties.RocketProperties;
 import org.apache.rocketmq.client.consumer.DefaultMQPushConsumer;
 import org.apache.rocketmq.common.consumer.ConsumeFromWhere;
+import org.apache.rocketmq.remoting.RPCHook;
 import org.apache.rocketmq.remoting.protocol.heartbeat.MessageModel;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -23,12 +24,18 @@ public class RocketConsumerBuilder extends AbstractRocketBuilder<DefaultMQPushCo
         if (consumerConfig == null) {
             throw new RuntimeException("RocketMQ 消费者配置不能为空");
         }
-        DefaultMQPushConsumer consumer = new DefaultMQPushConsumer(consumerConfig.getConsumerGroup());
         String nameServers = resolveNameServers(consumerConfig.getNameServersStr(), rocket.getNameServersStr());
         if (nameServers == null || nameServers.isEmpty()) {
             throw new RuntimeException("RocketMQ Name Server 地址不能为空");
         }
-        consumer.setNamesrvAddr(nameServers);
+        RPCHook aclHook = RocketClientSupport.aclHook(rocket);
+        DefaultMQPushConsumer consumer = aclHook == null
+                ? new DefaultMQPushConsumer(consumerConfig.getConsumerGroup())
+                : new DefaultMQPushConsumer(consumerConfig.getConsumerGroup(), aclHook);
+        RocketClientSupport.applyCommon(consumer, rocket, nameServers);
+        log.info("RocketMQ Consumer 已装配, group={}, namesrv={}, acl={}, vipChannel={}, messageModel={}",
+                consumer.getConsumerGroup(), nameServers, aclHook != null, consumer.isVipChannelEnabled(),
+                consumerConfig.getMessageModel());
         if (consumerConfig.getConsumeThreadMin() != null) {
             consumer.setConsumeThreadMin(consumerConfig.getConsumeThreadMin());
         }

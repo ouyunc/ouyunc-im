@@ -1,5 +1,5 @@
 # RocketMQ 单节点配置文件
-# 与 Kafka 配置风格一致，适用于开发环境
+# 与 Kafka 配置风格一致，适用于本机自建 NameServer。阿里云实例用 rocket-config-aliyun.yml。
 
 ouyunc:
   mq:

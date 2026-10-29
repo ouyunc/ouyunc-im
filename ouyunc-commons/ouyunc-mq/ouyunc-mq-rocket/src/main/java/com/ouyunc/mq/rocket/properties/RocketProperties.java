@@ -32,12 +32,66 @@ public class RocketProperties {
      */
     private String charset;
 
+    /**
+     * 阿里云 RAM AccessKey。与 {@link #secretKey} 同时配置时启用 ACL。
+     * 自建 RocketMQ 不填。不要把真实密钥提交到仓库。
+     */
+    private String accessKey;
+
+    /**
+     * 阿里云 RAM SecretKey。与 {@link #accessKey} 成对出现。
+     */
+    private String secretKey;
+
+    /**
+     * 是否走 Broker VIP 通道（10909）。不填则使用客户端默认值 true。
+     * 阿里云接入点没有 10909，配置里需要显式设为 false。
+     */
+    private Boolean vipChannelEnabled;
+
+    /**
+     * 命名空间。配置后客户端会给 Topic、Group 加前缀。不填则不设置。
+     */
+    private String namespace;
+
     public String getCharset() {
         return charset;
     }
 
     public void setCharset(String charset) {
         this.charset = charset;
+    }
+
+    public String getAccessKey() {
+        return accessKey;
+    }
+
+    public void setAccessKey(String accessKey) {
+        this.accessKey = accessKey;
+    }
+
+    public String getSecretKey() {
+        return secretKey;
+    }
+
+    public void setSecretKey(String secretKey) {
+        this.secretKey = secretKey;
+    }
+
+    public Boolean getVipChannelEnabled() {
+        return vipChannelEnabled;
+    }
+
+    public void setVipChannelEnabled(Boolean vipChannelEnabled) {
+        this.vipChannelEnabled = vipChannelEnabled;
+    }
+
+    public String getNamespace() {
+        return namespace;
+    }
+
+    public void setNamespace(String namespace) {
+        this.namespace = namespace;
     }
 
     public List<String> getNameServers() {
