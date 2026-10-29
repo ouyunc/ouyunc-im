@@ -133,7 +133,33 @@
     <build>
         <!-- 固定产物名；shade 产出可执行 fat jar，install 到本地仓库后也可 java -jar 直接运行 -->
         <finalName>ouyunc-im-server</finalName>
+        <!-- 仅对 im-build.properties 做 filtering，把 ${revision} 替换为真实版本；其余资源保持原样，避免破坏 yml 占位符 -->
+        <resources>
+            <resource>
+                <directory>src/main/resources</directory>
+                <filtering>false</filtering>
+                <excludes>
+                    <exclude>im-build.properties</exclude>
+                </excludes>
+            </resource>
+            <resource>
+                <directory>src/main/resources</directory>
+                <filtering>true</filtering>
+                <includes>
+                    <include>im-build.properties</include>
+                </includes>
+            </resource>
+        </resources>
         <plugins>
+            <!-- 显式 UTF-8，避免 Windows 默认 GBK 过滤资源时把注释/内容写乱 -->
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-resources-plugin</artifactId>
+                <configuration>
+                    <encoding>${java.encoding}</encoding>
+                    <propertiesEncoding>${java.encoding}</propertiesEncoding>
+                </configuration>
+            </plugin>
             <!--切面插件, 跨 JAR 的织入限制：
       默认情况下，AspectJ 在编译时仅对同一个编译单元内的类进行织入。
       要使一个切面对另一个 JAR 中的类生效，需要在构建过程中使用 AspectJ 编译器同时处理所有相关的 JAR 文件。-->
@@ -217,6 +243,10 @@
                                     <mainClass>com.ouyunc.message.ServerLauncher</mainClass>
                                     <manifestEntries>
                                         <Multi-Release>true</Multi-Release>
+                                        <!-- 供 MessageBanner 通过 Package#getImplementationVersion 读取版本 -->
+                                        <Implementation-Title>${project.name}</Implementation-Title>
+                                        <Implementation-Version>${project.version}</Implementation-Version>
+                                        <Implementation-Vendor>ouyunc</Implementation-Vendor>
                                     </manifestEntries>
                                 </transformer>
                             </transformers>

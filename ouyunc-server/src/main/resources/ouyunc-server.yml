@@ -1,18 +1,18 @@
 # 消息服务端配置信息
 ouyunc:
   profiles:
-    active: dev
+    active: prod
   message:
     storage:
       # 消息正文、会话 ZSet、最后一条消息共用的 TTL，单位秒。默认 7 天。
       # 每次写会话会刷新 ZSet 和最后一条的过期时间；单条正文从写入时起算。过期后按 ID 回源 Mongo/MySQL 并按该 TTL 回填。
       hot-data-ttl-seconds: 604800
     # 服务端口
-    port: 6001
+    port: 6003
     # 服务名称
     name: ouyunc-message
     # server提供的暴露ip(可以理解为主动设置本机ip),如果不指定则使用本地网卡ip，一般为内网ip; 注意如果开启集群，要注意集群服务的地址和该服务所在ip的网络是否连通
-    #ip: 10.8.1.10
+    #ip: 47.92.113.112
     # websocket 配置
     websocket:
       # websocket 监听路径
@@ -27,7 +27,7 @@ ouyunc:
       privateKey: ssl/m.ouyunc.com_pkcs8.key
     # Nginx stream 配置 proxy_protocol on 时开启。开启后所有连接都必须携带 PROXY Protocol 头。
     proxy-protocol:
-      enabled: false
+      enabled: true
       # 默认允许所有代理来源，部署时必须通过安全组、防火墙或容器网络确保服务端口只对 Nginx 开放。
       # 生产环境获取到固定代理地址后，建议收紧为 Nginx 的具体 IP（/32、/128）或专用代理网段。
       trusted-proxies:
