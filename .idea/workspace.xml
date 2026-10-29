@@ -6,10 +6,13 @@
   <component name="ChangeListManager">
     <list default="true" id="f5e04433-bce4-4c4c-925d-8bad5c9272b8" name="Changes" comment="增加客户端packet 协议">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/ouyunc-server/pom.xml" beforeDir="false" afterPath="$PROJECT_DIR$/ouyunc-server/pom.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/ouyunc-server/src/main/java/com/ouyunc/message/banner/MessageBanner.java" beforeDir="false" afterPath="$PROJECT_DIR$/ouyunc-server/src/main/java/com/ouyunc/message/banner/MessageBanner.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/ouyunc-server/src/main/resources/im-banner.txt" beforeDir="false" afterPath="$PROJECT_DIR$/ouyunc-server/src/main/resources/im-banner.txt" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/ouyunc-server/src/main/resources/ouyunc-server.yml" beforeDir="false" afterPath="$PROJECT_DIR$/ouyunc-server/src/main/resources/ouyunc-server.yml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyunc-commons/ouyunc-base/src/main/java/com/ouyunc/base/config/ConfigConstant.java" beforeDir="false" afterPath="$PROJECT_DIR$/ouyunc-commons/ouyunc-base/src/main/java/com/ouyunc/base/config/ConfigConstant.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyunc-commons/ouyunc-base/src/main/java/com/ouyunc/base/config/ConfigTree.java" beforeDir="false" afterPath="$PROJECT_DIR$/ouyunc-commons/ouyunc-base/src/main/java/com/ouyunc/base/config/ConfigTree.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyunc-commons/ouyunc-base/src/test/java/com/ouyunc/base/config/ConfigTreeTest.java" beforeDir="false" afterPath="$PROJECT_DIR$/ouyunc-commons/ouyunc-base/src/test/java/com/ouyunc/base/config/ConfigTreeTest.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyunc-commons/ouyunc-config/ouyunc-config-core/src/main/java/com/ouyunc/config/ConfigCenterClient.java" beforeDir="false" afterPath="$PROJECT_DIR$/ouyunc-commons/ouyunc-config/ouyunc-config-core/src/main/java/com/ouyunc/config/ConfigCenterClient.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyunc-commons/ouyunc-config/ouyunc-config-core/src/main/java/com/ouyunc/config/ConfigLocator.java" beforeDir="false" afterPath="$PROJECT_DIR$/ouyunc-commons/ouyunc-config/ouyunc-config-core/src/main/java/com/ouyunc/config/ConfigLocator.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyunc-commons/ouyunc-config/ouyunc-config-core/src/main/java/com/ouyunc/config/ConfigOverrides.java" beforeDir="false" afterPath="$PROJECT_DIR$/ouyunc-commons/ouyunc-config/ouyunc-config-core/src/main/java/com/ouyunc/config/ConfigOverrides.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyunc-commons/ouyunc-config/ouyunc-config-zk/src/main/java/com/ouyunc/config/zk/ZookeeperConfigCenterClient.java" beforeDir="false" afterPath="$PROJECT_DIR$/ouyunc-commons/ouyunc-config/ouyunc-config-zk/src/main/java/com/ouyunc/config/zk/ZookeeperConfigCenterClient.java" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -110,35 +113,35 @@
     <option name="hideEmptyMiddlePackages" value="true" />
     <option name="showLibraryContents" value="true" />
   </component>
-  <component name="PropertiesComponent"><![CDATA[{
-  "keyToString": {
-    "Application.ServerLauncher.executor": "Run",
-    "Application.StartServer.executor": "Debug",
-    "JUnit.RateLimitTest.blankKeyIsRejectedWithoutSharingABucket.executor": "Run",
-    "JUnit.RateLimitTest.bucketRefillsAfterBurstIsSpent.executor": "Run",
-    "JUnit.RateLimitTest.oversizedFrameDoesNotConsumeTheMessageToken.executor": "Run",
-    "JUnit.RateLimitTest.undersizedBurstsAreRaisedToTheProtocolMinimum.executor": "Run",
-    "Maven.ouyunc-im [clean].executor": "Run",
-    "Maven.ouyunc-im [install].executor": "Run",
-    "Maven.ouyunc-im [package].executor": "Run",
-    "RunOnceActivity.ShowReadmeOnStart": "true",
-    "RunOnceActivity.git.unshallow": "true",
-    "RunOnceActivity.typescript.service.memoryLimit.init": "true",
-    "codeWithMe.voiceChat.enabledByDefault": "false",
-    "git-widget-placeholder": "6.5.6",
-    "kotlin-language-version-configured": "true",
-    "last_opened_file_path": "D:/workspace/ouyunc-im/ouyunc-server/src/main/resources",
-    "node.js.detected.package.eslint": "true",
-    "node.js.selected.package.eslint": "(autodetect)",
-    "node.js.selected.package.tslint": "(autodetect)",
-    "nodejs_package_manager_path": "npm",
-    "project.structure.last.edited": "Modules",
-    "project.structure.proportion": "0.0",
-    "project.structure.side.proportion": "0.0",
-    "settings.editor.selected.configurable": "MavenSettings",
-    "vue.rearranger.settings.migration": "true"
+  <component name="PropertiesComponent">{
+  &quot;keyToString&quot;: {
+    &quot;Application.ServerLauncher.executor&quot;: &quot;Run&quot;,
+    &quot;Application.StartServer.executor&quot;: &quot;Debug&quot;,
+    &quot;JUnit.RateLimitTest.blankKeyIsRejectedWithoutSharingABucket.executor&quot;: &quot;Run&quot;,
+    &quot;JUnit.RateLimitTest.bucketRefillsAfterBurstIsSpent.executor&quot;: &quot;Run&quot;,
+    &quot;JUnit.RateLimitTest.oversizedFrameDoesNotConsumeTheMessageToken.executor&quot;: &quot;Run&quot;,
+    &quot;JUnit.RateLimitTest.undersizedBurstsAreRaisedToTheProtocolMinimum.executor&quot;: &quot;Run&quot;,
+    &quot;Maven.ouyunc-im [clean].executor&quot;: &quot;Run&quot;,
+    &quot;Maven.ouyunc-im [install].executor&quot;: &quot;Run&quot;,
+    &quot;Maven.ouyunc-im [package].executor&quot;: &quot;Run&quot;,
+    &quot;RunOnceActivity.ShowReadmeOnStart&quot;: &quot;true&quot;,
+    &quot;RunOnceActivity.git.unshallow&quot;: &quot;true&quot;,
+    &quot;RunOnceActivity.typescript.service.memoryLimit.init&quot;: &quot;true&quot;,
+    &quot;codeWithMe.voiceChat.enabledByDefault&quot;: &quot;false&quot;,
+    &quot;git-widget-placeholder&quot;: &quot;6.5.6&quot;,
+    &quot;kotlin-language-version-configured&quot;: &quot;true&quot;,
+    &quot;last_opened_file_path&quot;: &quot;D:/workspace/ouyunc-im/ouyunc-server/src/main/resources&quot;,
+    &quot;node.js.detected.package.eslint&quot;: &quot;true&quot;,
+    &quot;node.js.selected.package.eslint&quot;: &quot;(autodetect)&quot;,
+    &quot;node.js.selected.package.tslint&quot;: &quot;(autodetect)&quot;,
+    &quot;nodejs_package_manager_path&quot;: &quot;npm&quot;,
+    &quot;project.structure.last.edited&quot;: &quot;Modules&quot;,
+    &quot;project.structure.proportion&quot;: &quot;0.0&quot;,
+    &quot;project.structure.side.proportion&quot;: &quot;0.0&quot;,
+    &quot;settings.editor.selected.configurable&quot;: &quot;MavenSettings&quot;,
+    &quot;vue.rearranger.settings.migration&quot;: &quot;true&quot;
   }
-}]]></component>
+}</component>
   <component name="ReactorSettings">
     <option name="notificationShown" value="true" />
   </component>
@@ -333,15 +336,8 @@
       <workItem from="1792652861100" duration="579000" />
       <workItem from="1792654994821" duration="574000" />
       <workItem from="1792659246411" duration="561000" />
-      <workItem from="1793189093907" duration="4630000" />
-    </task>
-    <task id="LOCAL-00161" summary="增加客户端packet 协议">
-      <option name="closed" value="true" />
-      <created>1791080469508</created>
-      <option name="number" value="00161" />
-      <option name="presentableId" value="LOCAL-00161" />
-      <option name="project" value="LOCAL" />
-      <updated>1791080469508</updated>
+      <workItem from="1793189093907" duration="5347000" />
+      <workItem from="1793275828855" duration="1206000" />
     </task>
     <task id="LOCAL-00162" summary="增加客户端packet 协议">
       <option name="closed" value="true" />
@@ -727,7 +723,15 @@
       <option name="project" value="LOCAL" />
       <updated>1792560474268</updated>
     </task>
-    <option name="localTasksCounter" value="210" />
+    <task id="LOCAL-00210" summary="增加客户端packet 协议">
+      <option name="closed" value="true" />
+      <created>1793274697804</created>
+      <option name="number" value="00210" />
+      <option name="presentableId" value="LOCAL-00210" />
+      <option name="project" value="LOCAL" />
+      <updated>1793274697804</updated>
+    </task>
+    <option name="localTasksCounter" value="211" />
     <servers />
   </component>
   <component name="TypeScriptGeneratedFilesManager">

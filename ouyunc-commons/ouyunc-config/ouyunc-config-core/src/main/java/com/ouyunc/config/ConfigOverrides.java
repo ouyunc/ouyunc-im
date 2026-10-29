@@ -62,6 +62,7 @@ final class ConfigOverrides {
         putIfAbsent(ConfigConstant.PROP_NACOS_CONTEXT_PATH, System.getProperty(ConfigConstant.PROP_NACOS_CONTEXT_PATH));
         putIfAbsent(ConfigConstant.PROP_ZK_CONNECT, System.getProperty(ConfigConstant.PROP_ZK_CONNECT));
         putIfAbsent(ConfigConstant.PROP_ZK_PATH, System.getProperty(ConfigConstant.PROP_ZK_PATH));
+        putIfAbsent(ConfigConstant.PROP_ZK_FORMAT, System.getProperty(ConfigConstant.PROP_ZK_FORMAT));
     }
 
     private void readEnvironment() {
@@ -77,6 +78,7 @@ final class ConfigOverrides {
         putIfAbsent(ConfigConstant.PROP_NACOS_CONTEXT_PATH, System.getenv(ConfigConstant.ENV_NACOS_CONTEXT_PATH));
         putIfAbsent(ConfigConstant.PROP_ZK_CONNECT, System.getenv(ConfigConstant.ENV_ZK_CONNECT));
         putIfAbsent(ConfigConstant.PROP_ZK_PATH, System.getenv(ConfigConstant.ENV_ZK_PATH));
+        putIfAbsent(ConfigConstant.PROP_ZK_FORMAT, System.getenv(ConfigConstant.ENV_ZK_FORMAT));
     }
 
     private void putIfAbsent(String key, String value) {

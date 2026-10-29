@@ -11,7 +11,8 @@ public interface ConfigCenterClient {
     ConfigCenterType type();
 
     /**
-     * 按基础配置、环境配置的顺序返回 YAML 原文。
+     * 按基础配置、环境配置的顺序返回可 merge 的 YAML 原文。
+     * ZooKeeper {@code properties} 格式也会先展开再 dump 成 YAML。
      * 节点不存在时跳过，不要放空字符串。连接失败抛 {@link com.ouyunc.base.config.ConfigLoadException}。
      */
     List<String> loadDocuments(ConfigLocator locator, String profile);

@@ -24,11 +24,12 @@ public final class ConfigLocator {
     private final String nacosContextPath;
     private final String zkConnectString;
     private final String zkPath;
+    private final ZkConfigFormat zkFormat;
 
     private ConfigLocator(String externalFile, ConfigCenterType centerType, boolean failFast,
                           String nacosServerAddr, String nacosNamespace, String nacosGroup, String nacosDataId,
                           String nacosUsername, String nacosPassword, String nacosContextPath,
-                          String zkConnectString, String zkPath) {
+                          String zkConnectString, String zkPath, ZkConfigFormat zkFormat) {
         this.externalFile = externalFile;
         this.centerType = centerType;
         this.failFast = failFast;
@@ -41,6 +42,7 @@ public final class ConfigLocator {
         this.nacosContextPath = nacosContextPath;
         this.zkConnectString = zkConnectString;
         this.zkPath = zkPath;
+        this.zkFormat = zkFormat;
     }
 
     /**
@@ -66,9 +68,11 @@ public final class ConfigLocator {
         String zkConnectString = first(overrides, yaml, ConfigConstant.PROP_ZK_CONNECT, ConfigConstant.YAML_ZK_CONNECT, null);
         String zkPath = defaultIfBlank(first(overrides, yaml,
                 ConfigConstant.PROP_ZK_PATH, ConfigConstant.YAML_ZK_PATH, null), ConfigConstant.DEFAULT_ZK_PATH);
+        ZkConfigFormat zkFormat = ZkConfigFormat.from(first(overrides, yaml,
+                ConfigConstant.PROP_ZK_FORMAT, ConfigConstant.YAML_ZK_FORMAT, ConfigConstant.DEFAULT_ZK_FORMAT));
         requireAddress(centerType, nacosServerAddr, zkConnectString);
         return new ConfigLocator(externalFile, centerType, failFast, nacosServerAddr, nacosNamespace, nacosGroup,
-                nacosDataId, nacosUsername, nacosPassword, nacosContextPath, zkConnectString, zkPath);
+                nacosDataId, nacosUsername, nacosPassword, nacosContextPath, zkConnectString, zkPath, zkFormat);
     }
 
     public String externalFile() {
@@ -119,6 +123,10 @@ public final class ConfigLocator {
         return zkPath;
     }
 
+    public ZkConfigFormat zkFormat() {
+        return zkFormat;
+    }
+
     @Override
     public String toString() {
         return "ConfigLocator{centerType=" + centerType
@@ -128,6 +136,7 @@ public final class ConfigLocator {
                 + ", nacosGroup=" + nacosGroup
                 + ", nacosDataId=" + nacosDataId
                 + ", zkPath=" + zkPath
+                + ", zkFormat=" + zkFormat
                 + "}";
     }
 

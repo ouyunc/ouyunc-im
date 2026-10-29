@@ -1,6 +1,9 @@
 package com.ouyunc.base.config;
 
 import org.apache.commons.lang3.StringUtils;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.yaml.snakeyaml.DumperOptions;
 import org.yaml.snakeyaml.Yaml;
 
 import java.io.InputStream;
@@ -22,6 +25,8 @@ import java.util.regex.Pattern;
  */
 public final class ConfigTree {
 
+    private static final Logger log = LoggerFactory.getLogger(ConfigTree.class);
+
     private static final Pattern PLACEHOLDER = Pattern.compile("\\$\\{([^{}]+)}");
 
     private static final Pattern EXACT_PLACEHOLDER = Pattern.compile("^\\$\\{([^{}]+)}$");
@@ -40,6 +45,75 @@ public final class ConfigTree {
             throw new ConfigLoadException("YAML 解析失败", ex);
         }
         return asRootMap(loaded);
+    }
+
+    /**
+     * 把配置树写成 YAML 原文，供配置中心「properties 子节点」转成可 merge 的文档。
+     */
+    public static String dumpYaml(Map<String, Object> root) {
+        if (root == null || root.isEmpty()) {
+            return "";
+        }
+        DumperOptions options = new DumperOptions();
+        options.setDefaultFlowStyle(DumperOptions.FlowStyle.BLOCK);
+        options.setPrettyFlow(true);
+        return new Yaml(options).dump(root);
+    }
+
+    /**
+     * 把扁平点分 key（如 {@code ouyunc.cache.redis.host}）写入嵌套 Map。
+     * 中间段已是标量时用 Map 覆盖并打 warn，与 deepMerge「后者覆盖」一致。
+     */
+    public static void putDotted(Map<String, Object> root, String dottedKey, Object value) {
+        if (root == null || StringUtils.isBlank(dottedKey)) {
+            return;
+        }
+        String[] parts = dottedKey.split("\\.");
+        Map<String, Object> current = root;
+        StringBuilder path = new StringBuilder();
+        for (int i = 0; i < parts.length - 1; i++) {
+            String part = parts[i];
+            if (StringUtils.isBlank(part)) {
+                continue;
+            }
+            if (!path.isEmpty()) {
+                path.append('.');
+            }
+            path.append(part);
+            Object next = current.get(part);
+            if (next instanceof Map<?, ?> map) {
+                current = castMap(map);
+                continue;
+            }
+            if (next != null) {
+                log.warn("点分配置路径冲突，标量将被 Map 覆盖 path={} existing={}", path, next);
+            }
+            Map<String, Object> child = new LinkedHashMap<>();
+            current.put(part, child);
+            current = child;
+        }
+        String leaf = parts[parts.length - 1];
+        if (StringUtils.isBlank(leaf)) {
+            return;
+        }
+        current.put(leaf, value);
+    }
+
+    /**
+     * 由扁平 key-value 构建嵌套配置树。后写覆盖先写的同名叶子。
+     */
+    public static Map<String, Object> fromProperties(Map<String, ?> properties) {
+        Map<String, Object> root = new LinkedHashMap<>();
+        if (properties == null || properties.isEmpty()) {
+            return root;
+        }
+        for (Map.Entry<String, ?> entry : properties.entrySet()) {
+            if (entry.getKey() == null || StringUtils.isBlank(entry.getKey())) {
+                continue;
+            }
+            putDotted(root, entry.getKey().trim(), entry.getValue());
+        }
+        return root;
     }
 
     public static Map<String, Object> parseYaml(InputStream inputStream) {

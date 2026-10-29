@@ -79,4 +79,37 @@ class ConfigTreeTest {
         assertEquals("/ouyunc/im/config/ouyunc-server-pre.yml",
                 ConfigFiles.profileZkPath("/ouyunc/im/config/ouyunc-server.yml", "pre"));
     }
+
+    @Test
+    void putDottedBuildsNestedMap() {
+        Map<String, Object> root = ConfigTree.fromProperties(Map.of(
+                "ouyunc.cache.redis.host", "127.0.0.1",
+                "ouyunc.cache.redis.port", "6379",
+                "logistics.login-attempt-times", "5"
+        ));
+        assertEquals("127.0.0.1", ConfigTree.find(root, "ouyunc.cache.redis.host"));
+        assertEquals("6379", ConfigTree.find(root, "ouyunc.cache.redis.port"));
+        assertEquals("5", ConfigTree.find(root, "logistics.login-attempt-times"));
+    }
+
+    @Test
+    void putDottedOverwritesScalarMiddleWithMap() {
+        Map<String, Object> root = new java.util.LinkedHashMap<>();
+        ConfigTree.putDotted(root, "a.b", "scalar");
+        ConfigTree.putDotted(root, "a.b.c", "nested");
+        assertEquals("nested", ConfigTree.find(root, "a.b.c"));
+        assertInstanceOf(Map.class, ConfigTree.find(root, "a.b"));
+    }
+
+    @Test
+    void dumpYamlRoundTripKeepsNestedValues() {
+        Map<String, Object> root = ConfigTree.fromProperties(Map.of(
+                "ouyunc.message.port", "6002",
+                "foo", "bar"
+        ));
+        String yaml = ConfigTree.dumpYaml(root);
+        Map<String, Object> parsed = ConfigTree.parseYaml(yaml);
+        assertEquals("6002", ConfigTree.find(parsed, "ouyunc.message.port"));
+        assertEquals("bar", ConfigTree.find(parsed, "foo"));
+    }
 }

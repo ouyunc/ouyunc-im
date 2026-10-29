@@ -43,6 +43,12 @@ public final class ConfigConstant {
 
     public static final String DEFAULT_ZK_PATH = "/ouyunc/im/config/ouyunc-server.yml";
 
+    /**
+     * ZooKeeper 配置格式默认值：整节点 YAML 文档。
+     * {@code properties} 表示父路径下子节点名为 key、data 为 value。
+     */
+    public static final String DEFAULT_ZK_FORMAT = "yaml";
+
     public static final String PROP_ENV = "ouyunc.env";
 
     public static final String ENV_ENV = "OUYUNC_ENV";
@@ -95,6 +101,10 @@ public final class ConfigConstant {
 
     public static final String ENV_ZK_PATH = "OUYUNC_ZK_PATH";
 
+    public static final String PROP_ZK_FORMAT = "ouyunc.config.zk.format";
+
+    public static final String ENV_ZK_FORMAT = "OUYUNC_ZK_FORMAT";
+
     /** YAML 路径，和进程参数键一致，方便同一套查找 */
     public static final String YAML_ACTIVE_PROFILE = "ouyunc.profiles.active";
 
@@ -123,4 +133,6 @@ public final class ConfigConstant {
     public static final String YAML_ZK_CONNECT = "ouyunc.config.zk.connect-string";
 
     public static final String YAML_ZK_PATH = "ouyunc.config.zk.path";
+
+    public static final String YAML_ZK_FORMAT = "ouyunc.config.zk.format";
 }

@@ -3,10 +3,13 @@ package com.ouyunc.config.zk;
 import com.ouyunc.base.config.ConfigConstant;
 import com.ouyunc.base.config.ConfigFiles;
 import com.ouyunc.base.config.ConfigLoadException;
+import com.ouyunc.base.config.ConfigTree;
 import com.ouyunc.config.ConfigCenterClient;
 import com.ouyunc.config.ConfigCenterType;
 import com.ouyunc.config.ConfigLocator;
 import com.ouyunc.config.ConfigLogMask;
+import com.ouyunc.config.ZkConfigFormat;
+import org.apache.commons.lang3.StringUtils;
 import org.apache.curator.framework.CuratorFramework;
 import org.apache.curator.framework.CuratorFrameworkFactory;
 import org.apache.curator.retry.ExponentialBackoffRetry;
@@ -16,11 +19,18 @@ import org.slf4j.LoggerFactory;
 
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.concurrent.TimeUnit;
 
 /**
- * 从 ZooKeeper 节点读取 YAML 原文。节点不存在视为这一层没有配置，连接失败才抛错。
+ * 从 ZooKeeper 读取配置。
+ * <ul>
+ *   <li>{@link ZkConfigFormat#YAML}：节点 data 为 YAML 原文；可再读 profile 后缀节点</li>
+ *   <li>{@link ZkConfigFormat#PROPERTIES}：父路径下子节点名=key、data=value，展开后 dump 成一份 YAML</li>
+ * </ul>
+ * 节点不存在视为这一层没有配置，连接失败才抛错。
  */
 public class ZookeeperConfigCenterClient implements ConfigCenterClient {
 
@@ -44,15 +54,79 @@ public class ZookeeperConfigCenterClient implements ConfigCenterClient {
     public List<String> loadDocuments(ConfigLocator locator, String profile) {
         useNioClient();
         disableSaslClientIfUnset();
-        List<String> documents = new ArrayList<>(2);
         try (CuratorFramework client = open(locator.zkConnectString())) {
-            addIfPresent(documents, readPath(client, locator.zkPath()), locator.zkPath());
-            String profilePath = ConfigFiles.profileZkPath(locator.zkPath(), profile);
-            if (profilePath != null && !profilePath.equals(locator.zkPath())) {
-                loadProfile(client, locator, documents, profilePath);
+            if (locator.zkFormat() == ZkConfigFormat.PROPERTIES) {
+                return loadPropertiesDocuments(client, locator.zkPath());
             }
+            return loadYamlDocuments(client, locator, profile);
+        }
+    }
+
+    /**
+     * 整节点 YAML：基础路径 + 可选 profile 路径。
+     */
+    private static List<String> loadYamlDocuments(CuratorFramework client, ConfigLocator locator, String profile) {
+        List<String> documents = new ArrayList<>(2);
+        addIfPresent(documents, readPath(client, locator.zkPath()), locator.zkPath());
+        String profilePath = ConfigFiles.profileZkPath(locator.zkPath(), profile);
+        if (profilePath != null && !profilePath.equals(locator.zkPath())) {
+            loadProfile(client, locator, documents, profilePath);
         }
         return documents;
+    }
+
+    /**
+     * BMS 风格：path 即最终父目录，不再拼 profile 后缀。
+     */
+    private static List<String> loadPropertiesDocuments(CuratorFramework client, String path) {
+        Map<String, String> properties = readChildrenAsProperties(client, path);
+        if (properties.isEmpty()) {
+            log.info("ZooKeeper properties 父路径不存在或无有效子节点，跳过 path={}", path);
+            return List.of();
+        }
+        Map<String, Object> tree = ConfigTree.fromProperties(properties);
+        String yaml = ConfigTree.dumpYaml(tree);
+        if (StringUtils.isBlank(yaml)) {
+            return List.of();
+        }
+        log.info("ZooKeeper properties 配置已读取 path={} keys={}\n{}",
+                path, properties.size(), ConfigLogMask.maskSensitive(yaml));
+        return List.of(yaml);
+    }
+
+    /**
+     * 列出父路径子节点，节点名作 key、data 作 value。空名或空 data 跳过。
+     */
+    static Map<String, String> readChildrenAsProperties(CuratorFramework client, String path) {
+        Map<String, String> properties = new LinkedHashMap<>();
+        List<String> children;
+        try {
+            children = client.getChildren().forPath(path);
+        } catch (KeeperException.NoNodeException ex) {
+            return properties;
+        } catch (InterruptedException ex) {
+            Thread.currentThread().interrupt();
+            throw new ConfigLoadException("读取 ZooKeeper 子节点被中断: " + path, ex);
+        } catch (Exception ex) {
+            throw new ConfigLoadException("读取 ZooKeeper 子节点失败: " + path, ex);
+        }
+        if (children == null || children.isEmpty()) {
+            return properties;
+        }
+        for (String child : children) {
+            if (StringUtils.isBlank(child)) {
+                log.info("ZooKeeper 跳过空子节点名 path={}", path);
+                continue;
+            }
+            String childPath = path.endsWith("/") ? path + child : path + "/" + child;
+            String value = readPath(client, childPath);
+            if (value == null || value.isBlank()) {
+                log.info("ZooKeeper 子节点为空，跳过 path={}", childPath);
+                continue;
+            }
+            properties.put(child, value);
+        }
+        return properties;
     }
 
     /**
