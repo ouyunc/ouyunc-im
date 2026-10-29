@@ -17,8 +17,8 @@ ouyunc:
       # 与实例同一地域、同一 VPC 的服务用内网。进程不在该 VPC（本机、其他云）时改用下一行公网接入点。
       # 公网会产生下行流量费。两种地址不要和 HTTP Endpoint 混用。
       nameServers:
-        - http://MQ_INST_1781595675723248_BaFOayyh.cn-shanghai.mq-internal.aliyuncs.com:8080
-        # - http://MQ_INST_1781595675723248_BaFOayyh.mq.cn-shanghai.aliyuncs.com:80
+        - http://xxxx.cn-shanghai.mq-internal.aliyuncs.com:8080
+        # - http://xxxx.mq.cn-shanghai.aliyuncs.com:80
 
       # 阿里云没有 10909，必须显式关闭 VIP 通道。
       vipChannelEnabled: false
